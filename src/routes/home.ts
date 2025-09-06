@@ -3,9 +3,10 @@ import { Elysia } from 'elysia';
 import * as cheerio from 'cheerio';
 
 const normalizeSlug = (slug: string) => {
-    const lastPart = slug.split('/').filter(Boolean).pop() || '';
-    const cleaned = lastPart.replace(/(?:-episode.*|-season.*|-movie.*|-special.*)/, '');
-    return cleaned.replace(/-/g, ' ');
+    let lastPart = slug.split('/').filter(Boolean).pop() || '';
+    // A safer way to remove episode markers without being too greedy
+    lastPart = lastPart.replace(/-episode-\d+.*$/, '');
+    return lastPart.replace(/-/g, ' ');
 };
 
 const getAnilistData = async (search: string) => {
@@ -59,13 +60,26 @@ export const home = new Elysia().get('/home', async () => {
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    const animeListPromises = $('div.post-show ul li').map(async (index, element) => {
-        const rawSlug = $(element).find('a').attr('href') || '';
+    const animeElements = $('div.post-show ul li');
+
+    const animeListPromises = animeElements.map(async (index, element) => {
+        const linkElement = $(element).find('a');
+        const rawSlug = linkElement.attr('href') || '';
+        
+        if (!rawSlug) {
+            return null;
+        }
+
         const normalizedSlug = normalizeSlug(rawSlug);
         const anilistData = await getAnilistData(normalizedSlug);
 
         if (!anilistData) {
-            return null;
+            const titleFromPage = $(element).find('h2.entry-title').text().trim();
+            return {
+                id: null,
+                title: titleFromPage || normalizedSlug,
+                thumbnail: $(element).find('img').attr('src')
+            };
         }
 
         return {
@@ -75,7 +89,7 @@ export const home = new Elysia().get('/home', async () => {
         };
     }).get();
 
-    const animeList = await Promise.all(animeListPromises);
+    const animeList = (await Promise.all(animeListPromises)).filter(Boolean);
 
-    return animeList.filter(anime => anime && anime.id);
+    return animeList;
 });
