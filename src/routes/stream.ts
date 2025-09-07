@@ -83,7 +83,14 @@ const getYourUploadStream = async (url: string) => {
 
 // --- Get Blogger Streams ---
 const getBloggerStreams = async (url: string, clientIp: string | null) => {
-    console.log(`Fetching Blogger page to get cookies and config: ${url}`);
+    const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
+    const cachedResult: any = await redis.get(cacheKey);
+    if (cachedResult) {
+        console.log(`[Cache] HIT for Blogger stream data: ${url}`);
+        return cachedResult;
+    }
+
+    console.log(`[Cache] MISS for Blogger stream data. Fetching Blogger page to get cookies and config: ${url}`);
     
     const fetchHeaders: Record<string, string> = {
         'User-Agent': FAKE_USER_AGENT,
@@ -118,7 +125,9 @@ const getBloggerStreams = async (url: string, clientIp: string | null) => {
             const videoConfig = JSON.parse(jsonString);
 
             if (videoConfig.streams && videoConfig.streams.length > 0) {
-                return { streams: videoConfig.streams, cookie };
+                const result = { streams: videoConfig.streams, cookie };
+                await redis.set(cacheKey, result, { ex: STREAM_DATA_EXPIRATION_SECONDS });
+                return result;
             }
         }
     } else {
