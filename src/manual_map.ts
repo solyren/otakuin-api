@@ -47,13 +47,11 @@ const mapIdToSlug = async () => {
     const MANUAL_MAP_KEY = getManualMapKey(source);
     
     try {
-        // Update the JSON file
         const mapData = await readMapFile(source);
         mapData[id] = slug;
         await writeMapFile(source, mapData);
         console.log(`Successfully updated ${getMapFilePath(source)}`);
 
-        // Also update Redis for fast lookups
         await redis.hset(MANUAL_MAP_KEY, { [id]: slug });
         console.log(`Successfully mapped Anilist ID ${id} to slug in Redis for ${source}: ${slug}`);
 

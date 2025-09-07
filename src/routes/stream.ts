@@ -345,7 +345,15 @@ export const stream = new Elysia()
 
             const responseHeaders = new Headers(videoResponse.headers);
             responseHeaders.set('Content-Disposition', 'inline');
-            responseHeaders.set('Content-Type', 'video/mp4');
+
+            const originalContentType = responseHeaders.get('Content-Type');
+            if (!originalContentType || originalContentType.includes('octet-stream')) {
+                if (url.includes('.m3u8')) {
+                    responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
+                } else {
+                    responseHeaders.set('Content-Type', 'video/mp4');
+                }
+            }
 
             return new Response(videoResponse.body, {
                 status: videoResponse.status,
