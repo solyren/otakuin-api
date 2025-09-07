@@ -7,8 +7,8 @@
     "typescript": "^5"
   },
   "scripts": {
-    "start": "bun run src/index.ts",
-    "dev": "nodemon --exec bun run src/index.ts",
+    "start": "NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/index.ts",
+    "dev": "nodemon --exec 'NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/index.ts'",
     "scan": "bun run src/scan.ts",
     "scrape:slugs": "bun run src/lib/scraper.ts",
     "map": "bun run src/manual_map.ts",

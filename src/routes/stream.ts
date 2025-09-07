@@ -212,6 +212,35 @@ const getWibufileStream = async (url: string, request: Request) => {
     }
 };
 
+// Function to handle Mp4upload URLs
+const getMp4uploadStream = async (url: string) => {
+    const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
+
+    const cachedResult: any = await redis.get(cacheKey);
+    if (cachedResult) {
+        console.log(`[Cache] HIT for Mp4upload stream data: ${url}`);
+        return cachedResult;
+    }
+
+    console.log(`[Cache] MISS for Mp4upload stream data. Fetching Mp4upload page: ${url}`);
+    const response = await fetch(url, { headers: { 'User-Agent': FAKE_USER_AGENT } });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch Mp4upload page. Status: ${response.status}`);
+    }
+    const html = await response.text();
+    
+    const videoUrlMatch = html.match(/player\.src\({\s*type: "video\/mp4",\s*src: "([^"]+)"/);
+
+    if (videoUrlMatch && videoUrlMatch[1]) {
+        console.log(`Found stream in script: ${videoUrlMatch[1]}`);
+        const result = { url: videoUrlMatch[1], type: 'mp4' };
+        await redis.set(cacheKey, result, { ex: STREAM_DATA_EXPIRATION_SECONDS });
+        return result;
+    }
+
+    throw new Error('No stream URL found on Mp4upload page');
+};
+
 // Function to handle Krakenfiles URLs
 const getKrakenfilesStream = async (url: string) => {
     const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
@@ -437,6 +466,51 @@ export const stream = new Elysia()
 
                 if (!videoResponse.ok) {
                     throw new Error(`Failed to fetch video from Krakenfiles. Status: ${videoResponse.status}`);
+                }
+
+                const responseHeaders = new Headers();
+
+                for (const [key, value] of videoResponse.headers.entries()) {
+                    if (key.toLowerCase() !== 'content-disposition') {
+                        responseHeaders.set(key, value);
+                    }
+                }
+
+                responseHeaders.set('Content-Disposition', 'inline');
+
+                if (videoType === 'mp4') {
+                    responseHeaders.set('Content-Type', 'video/mp4');
+                } else {
+                    const originalContentType = videoResponse.headers.get('Content-Type');
+                    if (originalContentType) {
+                        responseHeaders.set('Content-Type', originalContentType);
+                    }
+                }
+
+                return new Response(videoResponse.body, {
+                    status: videoResponse.status,
+                    statusText: videoResponse.statusText,
+                    headers: responseHeaders
+                });
+            } else if (streamUrl.includes('mp4upload.com')) {
+                const mp4uploadResult = await getMp4uploadStream(streamUrl);
+                const videoUrl = mp4uploadResult.url;
+                const videoType = mp4uploadResult.type;
+
+                const fetchHeaders: Record<string, string> = {
+                    'User-Agent': FAKE_USER_AGENT,
+                    'Referer': streamUrl,
+                };
+
+                const rangeHeader = request.headers.get('range');
+                if (rangeHeader) {
+                    fetchHeaders['range'] = rangeHeader;
+                }
+
+                const videoResponse = await fetch(videoUrl, { headers: fetchHeaders });
+
+                if (!videoResponse.ok) {
+                    throw new Error(`Failed to fetch video from Mp4upload. Status: ${videoResponse.status}`);
                 }
 
                 const responseHeaders = new Headers();
