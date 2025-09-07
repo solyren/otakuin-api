@@ -99,6 +99,40 @@ const getFiledonStream = async (url: string) => {
     throw new Error('No stream URL found on Filedon page');
 };
 
+// Function to handle Pixeldrain URLs
+const getPixeldrainStream = async (url: string) => {
+    const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
+
+    const cachedResult: any = await redis.get(cacheKey);
+    if (cachedResult) {
+        console.log(`[Cache] HIT for Pixeldrain stream data: ${url}`);
+        return cachedResult;
+    }
+
+    console.log(`[Cache] MISS for Pixeldrain stream data. Fetching Pixeldrain page: ${url}`);
+    const id = new URL(url).pathname.split('/').pop();
+    if (!id) {
+        throw new Error('Invalid Pixeldrain URL: missing ID');
+    }
+
+    const infoUrl = `https://pixeldrain.com/api/file/${id}/info`;
+    const downloadUrl = `https://pixeldrain.com/api/file/${id}`;
+
+    const infoResponse = await fetch(infoUrl, { headers: { 'User-Agent': FAKE_USER_AGENT } });
+    if (!infoResponse.ok) {
+        throw new Error(`Failed to fetch Pixeldrain info. Status: ${infoResponse.status}`);
+    }
+    const info = await infoResponse.json();
+
+    if (!info.success) {
+        throw new Error(`Pixeldrain file ${id} is not available or info check failed.`);
+    }
+
+    const result = { url: downloadUrl, type: info.mime_type || 'application/octet-stream' };
+    await redis.set(cacheKey, JSON.stringify(result), { ex: STREAM_DATA_EXPIRATION_SECONDS });
+    return result;
+};
+
 export const stream = new Elysia()
     .get('/anime/stream/:id', async ({ params, set, request, ip }) => {
         const { id } = params;
@@ -174,13 +208,11 @@ export const stream = new Elysia()
 
                 responseHeaders.set('Content-Disposition', 'inline');
 
-                // Explicitly set Content-Type based on detected type
                 if (videoType === 'm3u8') {
                     responseHeaders.set('Content-Type', 'application/x-mpegURL');
                 } else if (videoType === 'mp4') {
                     responseHeaders.set('Content-Type', 'video/mp4');
                 } else {
-                    // Fallback to original Content-Type if type is unknown
                     const originalContentType = videoResponse.headers.get('Content-Type');
                     if (originalContentType) {
                         responseHeaders.set('Content-Type', originalContentType);
@@ -192,6 +224,15 @@ export const stream = new Elysia()
                     statusText: videoResponse.statusText,
                     headers: responseHeaders
                 });
+            } else if (streamUrl.includes('pixeldrain.com')) {
+                const pixeldrainResult = await getPixeldrainStream(streamUrl);
+                const videoUrl = pixeldrainResult.url;
+                const videoType = pixeldrainResult.type;
+
+                // For Pixeldrain, we will redirect as it provides a direct download link
+                set.status = 302;
+                set.headers['Location'] = videoUrl;
+                return 'Redirecting...';
             } else {
                 set.status = 501;
                 return { error: 'This stream provider is not yet supported for proxying.' };
