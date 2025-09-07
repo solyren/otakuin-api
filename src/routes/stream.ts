@@ -18,6 +18,70 @@ const commonFetchOptions = {
     }
 };
 
+// Function to handle DoodStream URLs
+const getDoodStream = async (url: string) => {
+    const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
+    const cachedResult: any = await redis.get(cacheKey);
+    if (cachedResult) {
+        console.log(`[Cache] HIT for DoodStream stream data: ${url}`);
+        return cachedResult;
+    }
+
+    console.log(`[Cache] MISS for DoodStream stream data. Fetching DoodStream page: ${url}`);
+    const response = await fetch(url, { headers: { 'User-Agent': FAKE_USER_AGENT, 'Referer': url } });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch DoodStream page. Status: ${response.status}`);
+    }
+    const html = await response.text();
+
+    const passMd5Match = html.match(/\/pass_md5\/([^\']+)/);
+    if (!passMd5Match || !passMd5Match[1]) {
+        throw new Error('Could not find pass_md5 token on DoodStream page');
+    }
+
+    const passMd5Url = `https://d-s.io/pass_md5/${passMd5Match[1]}`;
+    const md5Response = await fetch(passMd5Url, { headers: { 'User-Agent': FAKE_USER_AGENT, 'Referer': url } });
+    if (!md5Response.ok) {
+        throw new Error(`Failed to fetch pass_md5 URL. Status: ${md5Response.status}`);
+    }
+    const baseUrl = await md5Response.text();
+
+    const randomString = (Math.random() + 1).toString(36).substring(7);
+    const finalUrl = `${baseUrl}${randomString}?token=${passMd5Match[1].split('/').pop()}&expiry=${Date.now()}`;
+
+    const result = { url: finalUrl, type: 'mp4' };
+    await redis.set(cacheKey, result, { ex: STREAM_DATA_EXPIRATION_SECONDS });
+    return result;
+};
+
+// Function to handle YourUpload URLs
+const getYourUploadStream = async (url: string) => {
+    const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
+
+    const cachedResult: any = await redis.get(cacheKey);
+    if (cachedResult) {
+        console.log(`[Cache] HIT for YourUpload stream data: ${url}`);
+        return cachedResult;
+    }
+
+    console.log(`[Cache] MISS for YourUpload stream data. Fetching YourUpload page: ${url}`);
+    const response = await fetch(url, { headers: { 'User-Agent': FAKE_USER_AGENT } });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch YourUpload page. Status: ${response.status}`);
+    }
+    const html = await response.text();
+    
+    const fileMatch = html.match(/file:\s*'([^']+)'/);
+
+    if (fileMatch && fileMatch[1]) {
+        const result = { url: fileMatch[1], type: 'mp4' };
+        await redis.set(cacheKey, result, { ex: STREAM_DATA_EXPIRATION_SECONDS });
+        return result;
+    }
+
+    throw new Error('No stream URL found on YourUpload page');
+};
+
 // Function to handle Blogger URLs
 const getBloggerStreams = async (url: string, clientIp: string | null) => {
     console.log(`Fetching Blogger page to get cookies and config: ${url}`);
@@ -85,7 +149,7 @@ const getFiledonStream = async (url: string) => {
     const $ = cheerio.load(html);
 
     const scriptContent = $("script").text();
-    const m3u8Match = scriptContent.match(/"(https?:[^"]+\\.m3u8[^"]*)"/);
+    const m3u8Match = scriptContent.match(/"(https?:\/\/[^"]+\.m3u8[^"]*)"/);
     if (m3u8Match && m3u8Match[1]) {
         console.log(`Found M3U8 stream in script: ${m3u8Match[1]}`);
         const result = { url: m3u8Match[1], type: 'm3u8' };
@@ -134,7 +198,7 @@ const getPixeldrainStream = async (url: string) => {
     const info = await infoResponse.json();
 
     if (!info.success) {
-        throw new Error(`Pixeldrain file ${id} is not available or info check failed.`);
+        throw new Error(`Pixeldrain error: ${info.value}`);
     }
 
     const result = { url: downloadUrl, type: info.mime_type || 'application/octet-stream' };
@@ -229,7 +293,7 @@ const getMp4uploadStream = async (url: string) => {
     }
     const html = await response.text();
     
-    const videoUrlMatch = html.match(/player\.src\({\s*type: "video\/mp4",\s*src: "([^"]+)"/);
+    const videoUrlMatch = html.match(/player\.src\(\{\s*type:\s*"video\/mp4",\s*src:\s*"([^"]+)"\}\);/);
 
     if (videoUrlMatch && videoUrlMatch[1]) {
         console.log(`Found stream in script: ${videoUrlMatch[1]}`);
@@ -259,7 +323,7 @@ const getKrakenfilesStream = async (url: string) => {
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    const videoSource = $('video#my-video source').attr('src');
+    const videoSource = $("video#my-video source").attr('src');
 
     if (videoSource) {
         console.log(`Found stream in video source: ${videoSource}`);
@@ -280,12 +344,51 @@ export const stream = new Elysia()
             return { error: 'Missing stream ID' };
         }
 
+        const genericProxyHandler = async (url: string, referer?: string) => {
+            const fetchHeaders: Record<string, string> = {
+                'User-Agent': FAKE_USER_AGENT,
+            };
+            if (referer) {
+                fetchHeaders['Referer'] = referer;
+            }
+
+            const rangeHeader = request.headers.get('range');
+            if (rangeHeader) {
+                fetchHeaders['range'] = rangeHeader;
+            }
+
+            const videoResponse = await fetch(url, { headers: fetchHeaders });
+
+            if (!videoResponse.ok) {
+                throw new Error(`Failed to fetch video from ${url}. Status: ${videoResponse.status}`);
+            }
+
+            const responseHeaders = new Headers(videoResponse.headers);
+            responseHeaders.set('Content-Disposition', 'inline');
+
+            return new Response(videoResponse.body, {
+                status: videoResponse.status,
+                statusText: videoResponse.statusText,
+                headers: responseHeaders
+            });
+        };
+
         try {
-            const streamUrl = await redis.get(`${STREAM_KEY_PREFIX}${id}`);
+            let streamUrl = await redis.get(`${STREAM_KEY_PREFIX}${id}`);
 
             if (!streamUrl) {
                 set.status = 404;
                 return { error: 'Stream ID not found or has expired. Please fetch a new one.' };
+            }
+
+            if (streamUrl.includes('doply.net') || streamUrl.includes('d-s.io')) {
+                const doodResult = await getDoodStream(streamUrl);
+                return genericProxyHandler(doodResult.url, streamUrl);
+            }
+
+            if (streamUrl.includes('yourupload.com')) {
+                const yourUploadResult = await getYourUploadStream(streamUrl);
+                return genericProxyHandler(yourUploadResult.url, streamUrl);
             }
 
             if (streamUrl.includes('blogger.com')) {
@@ -315,228 +418,33 @@ export const stream = new Elysia()
                 }
             } else if (streamUrl.includes('filedon.co')) {
                 const filedonResult = await getFiledonStream(streamUrl);
-                const videoUrl = filedonResult.url;
-                const videoType = filedonResult.type;
-
-                const fetchHeaders: Record<string, string> = {
-                    'User-Agent': FAKE_USER_AGENT,
-                    'Referer': streamUrl,
-                };
-
-                const rangeHeader = request.headers.get('range');
-                if (rangeHeader) {
-                    fetchHeaders['range'] = rangeHeader;
-                }
-
-                const videoResponse = await fetch(videoUrl, { headers: fetchHeaders });
-
-                if (!videoResponse.ok) {
-                    throw new Error(`Failed to fetch video from Filedon. Status: ${videoResponse.status}`);
-                }
-
-                const responseHeaders = new Headers();
-
-                for (const [key, value] of videoResponse.headers.entries()) {
-                    if (key.toLowerCase() !== 'content-disposition') {
-                        responseHeaders.set(key, value);
-                    }
-                }
-
-                responseHeaders.set('Content-Disposition', 'inline');
-
-                if (videoType === 'm3u8') {
-                    responseHeaders.set('Content-Type', 'application/x-mpegURL');
-                } else if (videoType === 'mp4') {
-                    responseHeaders.set('Content-Type', 'video/mp4');
-                } else {
-                    const originalContentType = videoResponse.headers.get('Content-Type');
-                    if (originalContentType) {
-                        responseHeaders.set('Content-Type', originalContentType);
-                    }
-                }
-
-                return new Response(videoResponse.body, {
-                    status: videoResponse.status,
-                    statusText: videoResponse.statusText,
-                    headers: responseHeaders
-                });
+                return genericProxyHandler(filedonResult.url, streamUrl);
             } else if (streamUrl.includes('pixeldrain.com')) {
-                const pixeldrainResult = await getPixeldrainStream(streamUrl);
-                const videoUrl = pixeldrainResult.url;
-
-                const fetchHeaders: Record<string, string> = {
-                    'User-Agent': FAKE_USER_AGENT,
-                    'Referer': streamUrl, // Adding the Referer header
-                };
-
-                const rangeHeader = request.headers.get('range');
-                if (rangeHeader) {
-                    fetchHeaders['range'] = rangeHeader;
+                let videoUrl = streamUrl;
+                if (!streamUrl.includes('/api/file/')) {
+                    const pixeldrainResult = await getPixeldrainStream(streamUrl);
+                    videoUrl = pixeldrainResult.url;
                 }
-
-                const videoResponse = await fetch(videoUrl, { headers: fetchHeaders });
-
-                if (!videoResponse.ok) {
-                    throw new Error(`Failed to fetch video from Pixeldrain. Status: ${videoResponse.status}`);
-                }
-
-                const responseHeaders = new Headers();
-                for (const [key, value] of videoResponse.headers.entries()) {
-                    if (key.toLowerCase() !== 'content-disposition') {
-                        responseHeaders.set(key, value);
-                    }
-                }
-                responseHeaders.set('Content-Disposition', 'inline');
-
-                return new Response(videoResponse.body, {
-                    status: videoResponse.status,
-                    statusText: videoResponse.statusText,
-                    headers: responseHeaders
-                });
+                return genericProxyHandler(videoUrl, 'https://pixeldrain.com/');
             } else if (streamUrl.includes('wibufile.com')) {
                 let videoUrl: string;
-                let videoType: string;
-
                 if (streamUrl.includes('s0.wibufile.com') || streamUrl.includes('.mp4')) {
-                    console.log('[Resolver] Wibufile URL is already a direct link, skipping resolution.');
                     videoUrl = streamUrl;
-                    videoType = streamUrl.includes('.m3u8') ? 'm3u8' : 'mp4';
                 } else {
                     const wibufileResult = await getWibufileStream(streamUrl, request);
                     videoUrl = wibufileResult.url;
-                    videoType = wibufileResult.type;
                 }
-
-                const fetchHeaders: Record<string, string> = {
-                    'User-Agent': FAKE_USER_AGENT,
-                    'Referer': 'https://v1.samehadaku.how/', // This needs to match the referer used to get the stream URL
-                };
-
-                const rangeHeader = request.headers.get('range');
-                if (rangeHeader) {
-                    fetchHeaders['range'] = rangeHeader;
-                }
-
-                const videoResponse = await fetch(videoUrl, { headers: fetchHeaders });
-
-                if (!videoResponse.ok) {
-                    throw new Error(`Failed to fetch video from Wibufile. Status: ${videoResponse.status}`);
-                }
-
-                const responseHeaders = new Headers();
-                for (const [key, value] of videoResponse.headers.entries()) {
-                    if (key.toLowerCase() !== 'content-disposition') {
-                        responseHeaders.set(key, value);
-                    }
-                }
-                responseHeaders.set('Content-Disposition', 'inline');
-
-                if (videoType === 'm3u8') {
-                    responseHeaders.set('Content-Type', 'application/x-mpegURL');
-                } else if (videoType === 'mp4') {
-                    responseHeaders.set('Content-Type', 'video/mp4');
-                } else {
-                    const originalContentType = videoResponse.headers.get('Content-Type');
-                    if (originalContentType) {
-                        responseHeaders.set('Content-Type', originalContentType);
-                    }
-                }
-
-                return new Response(videoResponse.body, {
-                    status: videoResponse.status,
-                    statusText: videoResponse.statusText,
-                    headers: responseHeaders
-                });
+                return genericProxyHandler(videoUrl, 'https://v1.samehadaku.how/');
             } else if (streamUrl.includes('krakenfiles.com')) {
                 const krakenResult = await getKrakenfilesStream(streamUrl);
-                const videoUrl = krakenResult.url;
-                const videoType = krakenResult.type;
-
-                const fetchHeaders: Record<string, string> = {
-                    'User-Agent': FAKE_USER_AGENT,
-                    'Referer': streamUrl,
-                };
-
-                const rangeHeader = request.headers.get('range');
-                if (rangeHeader) {
-                    fetchHeaders['range'] = rangeHeader;
-                }
-
-                const videoResponse = await fetch(videoUrl, { headers: fetchHeaders });
-
-                if (!videoResponse.ok) {
-                    throw new Error(`Failed to fetch video from Krakenfiles. Status: ${videoResponse.status}`);
-                }
-
-                const responseHeaders = new Headers();
-
-                for (const [key, value] of videoResponse.headers.entries()) {
-                    if (key.toLowerCase() !== 'content-disposition') {
-                        responseHeaders.set(key, value);
-                    }
-                }
-
-                responseHeaders.set('Content-Disposition', 'inline');
-
-                if (videoType === 'mp4') {
-                    responseHeaders.set('Content-Type', 'video/mp4');
-                } else {
-                    const originalContentType = videoResponse.headers.get('Content-Type');
-                    if (originalContentType) {
-                        responseHeaders.set('Content-Type', originalContentType);
-                    }
-                }
-
-                return new Response(videoResponse.body, {
-                    status: videoResponse.status,
-                    statusText: videoResponse.statusText,
-                    headers: responseHeaders
-                });
+                return genericProxyHandler(krakenResult.url, streamUrl);
             } else if (streamUrl.includes('mp4upload.com')) {
                 const mp4uploadResult = await getMp4uploadStream(streamUrl);
-                const videoUrl = mp4uploadResult.url;
-                const videoType = mp4uploadResult.type;
-
-                const fetchHeaders: Record<string, string> = {
-                    'User-Agent': FAKE_USER_AGENT,
-                    'Referer': streamUrl,
-                };
-
-                const rangeHeader = request.headers.get('range');
-                if (rangeHeader) {
-                    fetchHeaders['range'] = rangeHeader;
-                }
-
-                const videoResponse = await fetch(videoUrl, { headers: fetchHeaders });
-
-                if (!videoResponse.ok) {
-                    throw new Error(`Failed to fetch video from Mp4upload. Status: ${videoResponse.status}`);
-                }
-
-                const responseHeaders = new Headers();
-
-                for (const [key, value] of videoResponse.headers.entries()) {
-                    if (key.toLowerCase() !== 'content-disposition') {
-                        responseHeaders.set(key, value);
-                    }
-                }
-
-                responseHeaders.set('Content-Disposition', 'inline');
-
-                if (videoType === 'mp4') {
-                    responseHeaders.set('Content-Type', 'video/mp4');
-                } else {
-                    const originalContentType = videoResponse.headers.get('Content-Type');
-                    if (originalContentType) {
-                        responseHeaders.set('Content-Type', originalContentType);
-                    }
-                }
-
-                return new Response(videoResponse.body, {
-                    status: videoResponse.status,
-                    statusText: videoResponse.statusText,
-                    headers: responseHeaders
-                });
+                return genericProxyHandler(mp4uploadResult.url, streamUrl);
+            } else if (streamUrl.includes('tsukasa.my.id') || streamUrl.includes('googleapis.com') || streamUrl.includes('dropbox.com') || streamUrl.includes('vidcache.net')) {
+                const videoUrl = streamUrl.includes('dropbox.com') ? streamUrl.replace(/&dl=1$/, '&raw=1') : streamUrl;
+                const referer = streamUrl.includes('dropbox.com') ? 'https://154.26.137.28/' : undefined;
+                return genericProxyHandler(videoUrl, referer);
             } else {
                 set.status = 501;
                 return { error: 'This stream provider is not yet supported for proxying.' };
