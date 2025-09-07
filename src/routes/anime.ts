@@ -1,8 +1,7 @@
-
 import { Elysia, t } from 'elysia';
 import { redis } from '../lib/redis';
 import Fuse from 'fuse.js';
-import { getSamehadakuEmbeds, getAnimesailEmbeds } from '../lib/scraper_embeds';
+import { getSamehadakuEmbeds, getAnimesailEmbeds } from '../lib/embeds';
 import { randomBytes } from 'crypto';
 
 const SLUGS_KEY = 'slugs:samehadaku';
@@ -11,6 +10,7 @@ const MANUAL_MAP_KEY = 'manual_map:anilist_id_to_slug';
 const STREAM_KEY_PREFIX = 'stream:';
 const STREAM_EXPIRATION_SECONDS = 21600; // 6 hours
 
+// --- Get Anilist Data By Id ---
 const getAnilistDataById = async (id: number) => {
     const query = `
     query ($id: Int) {
@@ -51,6 +51,7 @@ const getAnilistDataById = async (id: number) => {
     }
 };
 
+// --- Format Episode Slug ---
 const formatEpisodeSlug = (domain: string, pathSlug: string, episode: number) => {
     let baseUrl = domain;
     let cleanedPath = pathSlug;
@@ -65,8 +66,9 @@ const formatEpisodeSlug = (domain: string, pathSlug: string, episode: number) =>
     return `${baseUrl}/${cleanedPath}-episode-${episode}/`;
 };
 
+// --- Get Animesail Episode Url ---
 const getAnimesailEpisodeUrl = (foundEpisodeSlug: string, requestedEpisode: number): string => {
-    let baseUrl = 'https://154.26.137.28';
+    let baseUrl = process.env.ANIMESAIL_BASE_URL;
     let path = foundEpisodeSlug;
 
     if (foundEpisodeSlug.startsWith('http://') || foundEpisodeSlug.startsWith('https://')) {
@@ -87,7 +89,7 @@ const getAnimesailEpisodeUrl = (foundEpisodeSlug: string, requestedEpisode: numb
     return `${baseUrl}/${baseSeriesPath}-episode-${requestedEpisode}/`;
 };
 
-// Helper to generate stream IDs and store them in Redis
+// --- Generate Stream Ids ---
 const generateStreamIds = async (embeds: any[]): Promise<any[]> => {
     if (!embeds || embeds.length === 0) {
         return [];
@@ -95,7 +97,7 @@ const generateStreamIds = async (embeds: any[]): Promise<any[]> => {
 
     const pipeline = redis.pipeline();
     const processedEmbeds = embeds.map(embed => {
-        if (!embed.url) return null; // Skip embeds without a URL
+        if (!embed.url) return null;
         const streamId = randomBytes(4).toString('hex');
         pipeline.set(`${STREAM_KEY_PREFIX}${streamId}`, embed.url, { ex: STREAM_EXPIRATION_SECONDS });
         return {
@@ -103,7 +105,7 @@ const generateStreamIds = async (embeds: any[]): Promise<any[]> => {
             url: embed.url,
             stream_id: streamId
         };
-    }).filter(Boolean); // Filter out any null entries
+    }).filter(Boolean);
 
     if (processedEmbeds.length > 0) {
         await pipeline.exec();
@@ -157,7 +159,7 @@ export const anime = new Elysia()
             samehadakuInfo.found_slug = manualSlug as string;
             samehadakuInfo.found_slug_title = 'Manual Mapping';
             samehadakuInfo.match_method = 'manual';
-            samehadakuInfo.episode_url = formatEpisodeSlug('https://v1.samehadaku.how', samehadakuInfo.found_slug, episode);
+            samehadakuInfo.episode_url = formatEpisodeSlug(process.env.SAMEHADAKU_BASE_URL, samehadakuInfo.found_slug, episode);
         }
 
         if (!samehadakuInfo.found_slug && samehadakuSlugsData) {
@@ -176,7 +178,7 @@ export const anime = new Elysia()
                         samehadakuInfo.found_slug = bestMatch.slug;
                         samehadakuInfo.found_slug_title = bestMatch.title;
                         samehadakuInfo.match_method = search.source;
-                        samehadakuInfo.episode_url = formatEpisodeSlug('https://v1.samehadaku.how', samehadakuInfo.found_slug, episode);
+                        samehadakuInfo.episode_url = formatEpisodeSlug(process.env.SAMEHADAKU_BASE_URL, samehadakuInfo.found_slug, episode);
                         break;
                     }
                 }

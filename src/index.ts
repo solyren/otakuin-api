@@ -1,4 +1,6 @@
 
+import 'dotenv/config';
+
 import { Elysia } from 'elysia';
 import { home } from './routes/home';
 import { anime } from './routes/anime';

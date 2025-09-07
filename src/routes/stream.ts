@@ -10,7 +10,6 @@ const STREAM_DATA_CACHE_PREFIX = 'cache:stream_data:';
 const STREAM_DATA_EXPIRATION_SECONDS = 3600; // 1 hour
 const FAKE_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36';
 
-// Common fetch options, inspired by Animesail
 const commonFetchOptions = {
     headers: {
         'User-Agent': FAKE_USER_AGENT,
@@ -18,7 +17,7 @@ const commonFetchOptions = {
     }
 };
 
-// Function to handle DoodStream URLs
+// --- Get DoodStream ---
 const getDoodStream = async (url: string) => {
     const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
     const cachedResult: any = await redis.get(cacheKey);
@@ -54,7 +53,7 @@ const getDoodStream = async (url: string) => {
     return result;
 };
 
-// Function to handle YourUpload URLs
+// --- Get YourUpload Stream ---
 const getYourUploadStream = async (url: string) => {
     const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
 
@@ -82,7 +81,7 @@ const getYourUploadStream = async (url: string) => {
     throw new Error('No stream URL found on YourUpload page');
 };
 
-// Function to handle Blogger URLs
+// --- Get Blogger Streams ---
 const getBloggerStreams = async (url: string, clientIp: string | null) => {
     console.log(`Fetching Blogger page to get cookies and config: ${url}`);
     
@@ -130,14 +129,14 @@ const getBloggerStreams = async (url: string, clientIp: string | null) => {
     throw new Error('No streams found in VIDEO_CONFIG');
 };
 
-// Function to handle Filedon URLs
+// --- Get Filedon Stream ---
 const getFiledonStream = async (url: string) => {
     const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
 
     const cachedResult: any = await redis.get(cacheKey);
     if (cachedResult) {
         console.log(`[Cache] HIT for Filedon stream data: ${url}`);
-        return cachedResult; // Upstash Redis client auto-parses JSON
+        return cachedResult;
     }
 
     console.log(`[Cache] MISS for Filedon stream data. Fetching Filedon page: ${url}`);
@@ -172,14 +171,14 @@ const getFiledonStream = async (url: string) => {
     throw new Error('No stream URL found on Filedon page');
 };
 
-// Function to handle Pixeldrain URLs
+// --- Get Pixeldrain Stream ---
 const getPixeldrainStream = async (url: string) => {
     const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
 
     const cachedResult: any = await redis.get(cacheKey);
     if (cachedResult) {
         console.log(`[Cache] HIT for Pixeldrain stream data: ${url}`);
-        return cachedResult; // Upstash Redis client auto-parses JSON
+        return cachedResult;
     }
 
     console.log(`[Cache] MISS for Pixeldrain stream data. Fetching Pixeldrain page: ${url}`);
@@ -206,14 +205,14 @@ const getPixeldrainStream = async (url: string) => {
     return result;
 };
 
-// Function to handle Wibufile URLs
+// --- Get Wibufile Stream ---
 const getWibufileStream = async (url: string, request: Request) => {
     const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
 
     const cachedResult: any = await redis.get(cacheKey);
     if (cachedResult) {
         console.log(`[Cache] HIT for Wibufile stream data: ${url}`);
-        return cachedResult; // Upstash Redis client auto-parses JSON
+        return cachedResult;
     }
 
     console.log(`[Cache] MISS for Wibufile stream data. Fetching Wibufile embed page: ${url}`);
@@ -225,11 +224,11 @@ const getWibufileStream = async (url: string, request: Request) => {
         const { data: pageHtml } = await client.get(url, {
             headers: {
                 ...commonFetchOptions.headers,
-                'Referer': 'https://v1.samehadaku.how/',
+                'Referer': process.env.SAMEHADAKU_BASE_URL,
             },
         });
 
-        const apiUrlMatch = pageHtml.match(/url:\s*["'](.*api\.wibufile\.com\/api\/\?.*?)["']/);
+        const apiUrlMatch = pageHtml.match(/url:\s*["'](.*api.wibufile.com\/api\/?.*?)["']/);
         if (!apiUrlMatch || !apiUrlMatch[1]) {
             throw new Error('Could not find dynamic API URL in Wibufile page.');
         }
@@ -240,7 +239,7 @@ const getWibufileStream = async (url: string, request: Request) => {
         const { data: apiResponse } = await client.get(dynamicApiUrl, {
             headers: {
                 ...commonFetchOptions.headers,
-                'Referer': url, // Referer is the embed page itself
+                'Referer': url,
             }
         });
 
@@ -276,7 +275,7 @@ const getWibufileStream = async (url: string, request: Request) => {
     }
 };
 
-// Function to handle Mp4upload URLs
+// --- Get Mp4upload Stream ---
 const getMp4uploadStream = async (url: string) => {
     const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
 
@@ -293,11 +292,10 @@ const getMp4uploadStream = async (url: string) => {
     }
     const html = await response.text();
     
-    const videoUrlMatch = html.match(/player\.src\(\{\s*type:\s*"video\/mp4",\s*src:\s*"([^"]+)"\}\);/);
-
-    if (videoUrlMatch && videoUrlMatch[1]) {
-        console.log(`Found stream in script: ${videoUrlMatch[1]}`);
-        const result = { url: videoUrlMatch[1], type: 'mp4' };
+    const urlMatch = html.match(/player\.src\({[^}]*src:\s*"([^"]+)"/);
+    if (urlMatch && urlMatch[1]) {
+        console.log(`Found stream in script: ${urlMatch[1]}`);
+        const result = { url: urlMatch[1].trim(), type: 'mp4' };
         await redis.set(cacheKey, result, { ex: STREAM_DATA_EXPIRATION_SECONDS });
         return result;
     }
@@ -305,7 +303,7 @@ const getMp4uploadStream = async (url: string) => {
     throw new Error('No stream URL found on Mp4upload page');
 };
 
-// Function to handle Krakenfiles URLs
+// --- Get Krakenfiles Stream ---
 const getKrakenfilesStream = async (url: string) => {
     const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
 
@@ -365,6 +363,7 @@ export const stream = new Elysia()
 
             const responseHeaders = new Headers(videoResponse.headers);
             responseHeaders.set('Content-Disposition', 'inline');
+            responseHeaders.set('Content-Type', 'video/mp4');
 
             return new Response(videoResponse.body, {
                 status: videoResponse.status,
@@ -434,7 +433,7 @@ export const stream = new Elysia()
                     const wibufileResult = await getWibufileStream(streamUrl, request);
                     videoUrl = wibufileResult.url;
                 }
-                return genericProxyHandler(videoUrl, 'https://v1.samehadaku.how/');
+                return genericProxyHandler(videoUrl, process.env.SAMEHADAKU_BASE_URL);
             } else if (streamUrl.includes('krakenfiles.com')) {
                 const krakenResult = await getKrakenfilesStream(streamUrl);
                 return genericProxyHandler(krakenResult.url, streamUrl);
@@ -443,7 +442,7 @@ export const stream = new Elysia()
                 return genericProxyHandler(mp4uploadResult.url, streamUrl);
             } else if (streamUrl.includes('tsukasa.my.id') || streamUrl.includes('googleapis.com') || streamUrl.includes('dropbox.com') || streamUrl.includes('vidcache.net')) {
                 const videoUrl = streamUrl.includes('dropbox.com') ? streamUrl.replace(/&dl=1$/, '&raw=1') : streamUrl;
-                const referer = streamUrl.includes('dropbox.com') ? 'https://154.26.137.28/' : undefined;
+                const referer = streamUrl.includes('dropbox.com') ? process.env.ANIMESAIL_BASE_URL : undefined;
                 return genericProxyHandler(videoUrl, referer);
             } else {
                 set.status = 501;

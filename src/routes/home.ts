@@ -1,14 +1,14 @@
-
 import { Elysia } from 'elysia';
 import * as cheerio from 'cheerio';
 
+// --- Normalize Slug ---
 const normalizeSlug = (slug: string) => {
     let lastPart = slug.split('/').filter(Boolean).pop() || '';
-    // A safer way to remove episode markers without being too greedy
     lastPart = lastPart.replace(/-episode-\d+.*$/, '');
     return lastPart.replace(/-/g, ' ');
 };
 
+// --- Get Anilist Data ---
 const getAnilistData = async (search: string) => {
     const query = `
     query ($search: String) {
@@ -56,7 +56,7 @@ const getAnilistData = async (search: string) => {
 };
 
 export const home = new Elysia().get('/home', async () => {
-    const response = await fetch('https://v1.samehadaku.how/anime-terbaru/');
+    const response = await fetch(`${process.env.SAMEHADAKU_BASE_URL}/anime-terbaru/`);
     const html = await response.text();
     const $ = cheerio.load(html);
 

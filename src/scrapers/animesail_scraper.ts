@@ -1,8 +1,9 @@
-
 import * as cheerio from 'cheerio';
-import { redis } from './redis';
+import { redis } from '../lib/redis';
+import { Agent } from 'https';
+import { setGlobalDispatcher } from 'undici';
 
-const BASE_URL = 'https://154.26.137.28/anime/';
+const BASE_URL = `${process.env.ANIMESAIL_BASE_URL}/anime/`;
 const SOURCE_KEY = 'slugs:animesail';
 
 const fetchOptions = {
@@ -12,30 +13,20 @@ const fetchOptions = {
     }
 };
 
-// The website uses an IP address with a certificate for a different name,
-// so we need to disable certificate validation.
-// This is a workaround for the fact that fetch() in Node.js 18+
-// does not have a built-in way to ignore certificate errors.
-// We will use a custom agent.
-import { Agent } from 'https';
-import { setGlobalDispatcher } from 'undici';
-
-// @ts-ignore
+// --- Set Global Dispatcher ---
 const agent = new Agent({
     connect: {
         rejectUnauthorized: false
     }
 });
-
 setGlobalDispatcher(agent);
 
-
-async function startScraping() {
+// --- Start Scraping ---
+export async function startAnimesailScraping() {
     const url = BASE_URL;
     console.log(`Scraping page: ${url}`);
 
     try {
-        // Let's clear any old data first
         await redis.del(SOURCE_KEY);
         console.log('Cleared old slugs from Redis.');
 
@@ -76,5 +67,3 @@ async function startScraping() {
         console.error(`An error occurred while scraping:`, error);
     }
 }
-
-startScraping();

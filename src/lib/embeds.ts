@@ -4,7 +4,6 @@ import { Agent } from 'https';
 import { setGlobalDispatcher } from 'undici';
 import axios from 'axios';
 
-// @ts-ignore
 const agent = new Agent({
     connect: {
         rejectUnauthorized: false
@@ -22,12 +21,13 @@ const animesailFetchOptions = {
     }
 };
 
+// --- Resolve Player ---
 async function resolvePlayer(url: string, playerName: string): Promise<string | null> {
     console.log(`Resolving ${playerName} URL: ${url}`);
     try {
         const headers = {
             'User-Agent': FAKE_USER_AGENT,
-            'Referer': 'https://154.26.137.28/',
+            'Referer': process.env.ANIMESAIL_BASE_URL,
             'Cookie': '_as_ipin_tz=UTC; _as_ipin_lc=en-US; _as_ipin_ct=ID'
         };
 
@@ -47,6 +47,7 @@ async function resolvePlayer(url: string, playerName: string): Promise<string | 
     }
 }
 
+// --- Get Samehadaku Embeds ---
 async function getSamehadakuEmbeds(url: string): Promise<any[]> {
     try {
         const response = await fetch(url);
@@ -73,7 +74,7 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
             const nume = option.data('nume');
             const type = option.data('type');
 
-            const ajaxResponse = await fetch('https://v1.samehadaku.how/wp-admin/admin-ajax.php', {
+            const ajaxResponse = await fetch(`${process.env.SAMEHADAKU_BASE_URL}/wp-admin/admin-ajax.php`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -109,6 +110,7 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
     }
 }
 
+// --- Get Animesail Embeds ---
 async function getAnimesailEmbeds(url: string): Promise<any[]> {
     try {
         const response = await fetch(url, animesailFetchOptions);

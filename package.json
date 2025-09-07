@@ -10,10 +10,9 @@
     "start": "NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/index.ts",
     "dev": "nodemon --exec 'NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/index.ts'",
     "scan": "bun run src/scan.ts",
-    "scrape:slugs": "bun run src/lib/scraper.ts",
+    "scrape": "bun run src/scrapers/index.ts",
     "map": "bun run src/manual_map.ts",
-    "sync:map": "bun run src/sync_map.ts",
-    "scrape:animesail": "bun run src/lib/scraper_animesail.ts"
+    "sync:map": "bun run src/sync_map.ts"
   },
   "dependencies": {
     "@upstash/redis": "^1.35.3",

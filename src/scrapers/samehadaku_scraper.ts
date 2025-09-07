@@ -1,11 +1,11 @@
 import * as cheerio from 'cheerio';
-import { redis } from './redis';
+import { redis } from '../lib/redis';
 
-const BASE_URL = 'https://v1.samehadaku.how/daftar-anime-2/';
+const BASE_URL = `${process.env.SAMEHADAKU_BASE_URL}/daftar-anime-2/`;
 const SOURCE_KEY = 'slugs:samehadaku';
 
+// --- Scrape Page ---
 async function scrapePage(page: number): Promise<boolean> {
-    // Handle page 1 having a different URL structure
     const url = page === 1 ? BASE_URL : `${BASE_URL}page/${page}/`;
     console.log(`Scraping page: ${url}`);
 
@@ -33,7 +33,6 @@ async function scrapePage(page: number): Promise<boolean> {
             const title = $(el).find('div.data h2').text().trim();
 
             if (title && slug) {
-                // Using a HASH to store title -> slug mapping for the source
                 pipeline.hset(SOURCE_KEY, { [title]: slug });
             }
         });
@@ -48,7 +47,8 @@ async function scrapePage(page: number): Promise<boolean> {
     }
 }
 
-async function startScraping() {
+// --- Start Scraping ---
+export async function startSamehadakuScraping() {
     console.log('Starting slug scraping process for Samehadaku...');
     let page = 1;
     let hasMorePages = true;
@@ -57,7 +57,6 @@ async function startScraping() {
         hasMorePages = await scrapePage(page);
         if (hasMorePages) {
             page++;
-            // Add a small delay to avoid getting blocked
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
@@ -66,5 +65,3 @@ async function startScraping() {
     const total = await redis.hlen(SOURCE_KEY);
     console.log(`Total slugs stored for Samehadaku: ${total}`);
 }
-
-startScraping();
