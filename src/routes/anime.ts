@@ -1,7 +1,7 @@
-
 import { Elysia, t } from 'elysia';
 import { redis } from '../lib/redis';
 import Fuse from 'fuse.js';
+import { getSamehadakuEmbeds, getAnimesailEmbeds } from '../lib/scraper_embeds';
 
 const SLUGS_KEY = 'slugs:samehadaku';
 const ANIME_SAIL_SLUGS_KEY = 'slugs:animesail'; // New constant
@@ -225,11 +225,26 @@ export const anime = new Elysia()
             return { error: `Could not find a matching slug for ID ${id} from either source.` };
         }
 
+        // Scrape for embeds
+        let samehadakuEmbeds = [];
+        if (samehadakuInfo.episode_url) {
+            samehadakuEmbeds = await getSamehadakuEmbeds(samehadakuInfo.episode_url);
+        }
+
+        let animesailEmbeds = [];
+        if (animesailInfo.episode_url) {
+            animesailEmbeds = await getAnimesailEmbeds(animesailInfo.episode_url);
+        }
+
         return {
             anilist_id: id,
             episode: episode,
             samehadaku_info: samehadakuInfo,
-            animesail_info: animesailInfo
+            animesail_info: animesailInfo,
+            embeds: {
+                samehadaku: samehadakuEmbeds,
+                animesail: animesailEmbeds,
+            }
         };
 
     }, {
