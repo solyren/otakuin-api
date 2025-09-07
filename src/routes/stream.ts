@@ -448,5 +448,10 @@ export const stream = new Elysia()
     }, {
         params: t.Object({
             id: t.String()
-        })
+        }),
+        detail: {
+            summary: 'Proxy Stream Video',
+            description: 'Proxy untuk stream video dari provider pihak ketiga. Endpoint ini akan mengambil video dari URL asli dan meneruskannya ke client. Mendukung "range requests" untuk seeking.',
+            tags: ['Stream']
+        }
     });

@@ -168,8 +168,8 @@ const generateStreamIds = async (embeds: any[]): Promise<any[]> => {
     return processedEmbeds;
 };
 
-export const anime = new Elysia()
-    .get('/anime/:id', async ({ params, set }) => {
+export const anime = new Elysia({ prefix: '/anime' })
+    .get('/:id', async ({ params, set }) => {
         const id = parseInt(params.id);
         if (isNaN(id)) {
             set.status = 400;
@@ -187,8 +187,14 @@ export const anime = new Elysia()
             genres: animeDetails.genres,
             thumbnail: animeDetails.coverImage.large || animeDetails.coverImage.medium
         };
+    }, {
+        detail: {
+            summary: 'Detail Anime',
+            description: 'Mengambil detail informasi sebuah anime dari Anilist berdasarkan ID.',
+            tags: ['Anime']
+        }
     })
-    .get('/anime/:id/episode/:episode', async ({ params, set }) => {
+    .get('/:id/episode/:episode', async ({ params, set }) => {
         const id = parseInt(params.id);
         const episode = parseInt(params.episode);
 
@@ -287,5 +293,10 @@ export const anime = new Elysia()
         params: t.Object({
             id: t.Numeric(),
             episode: t.Numeric()
-        })
+        }),
+        detail: {
+            summary: 'Sumber Stream Episode',
+            description: 'Mencari dan menyediakan sumber stream untuk episode anime tertentu dari berbagai provider.',
+            tags: ['Anime']
+        }
     });

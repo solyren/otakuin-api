@@ -92,4 +92,10 @@ export const home = new Elysia().get('/home', async () => {
     const animeList = (await Promise.all(animeListPromises)).filter(Boolean);
 
     return animeList;
+}, {
+    detail: {
+        summary: 'Halaman Utama',
+        description: 'Mengambil daftar anime terbaru dari halaman utama Samehadaku.',
+        tags: ['Umum']
+    }
 });
