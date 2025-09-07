@@ -212,6 +212,36 @@ const getWibufileStream = async (url: string, request: Request) => {
     }
 };
 
+// Function to handle Krakenfiles URLs
+const getKrakenfilesStream = async (url: string) => {
+    const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
+
+    const cachedResult: any = await redis.get(cacheKey);
+    if (cachedResult) {
+        console.log(`[Cache] HIT for Krakenfiles stream data: ${url}`);
+        return cachedResult;
+    }
+
+    console.log(`[Cache] MISS for Krakenfiles stream data. Fetching Krakenfiles page: ${url}`);
+    const response = await fetch(url, { headers: { 'User-Agent': FAKE_USER_AGENT } });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch Krakenfiles page. Status: ${response.status}`);
+    }
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    const videoSource = $('video#my-video source').attr('src');
+
+    if (videoSource) {
+        console.log(`Found stream in video source: ${videoSource}`);
+        const result = { url: videoSource, type: 'mp4' };
+        await redis.set(cacheKey, result, { ex: STREAM_DATA_EXPIRATION_SECONDS });
+        return result;
+    }
+
+    throw new Error('No stream URL found on Krakenfiles page');
+};
+
 export const stream = new Elysia()
     .get('/anime/stream/:id', async ({ params, set, request, ip }) => {
         const { id } = params;
@@ -375,6 +405,51 @@ export const stream = new Elysia()
                 if (videoType === 'm3u8') {
                     responseHeaders.set('Content-Type', 'application/x-mpegURL');
                 } else if (videoType === 'mp4') {
+                    responseHeaders.set('Content-Type', 'video/mp4');
+                } else {
+                    const originalContentType = videoResponse.headers.get('Content-Type');
+                    if (originalContentType) {
+                        responseHeaders.set('Content-Type', originalContentType);
+                    }
+                }
+
+                return new Response(videoResponse.body, {
+                    status: videoResponse.status,
+                    statusText: videoResponse.statusText,
+                    headers: responseHeaders
+                });
+            } else if (streamUrl.includes('krakenfiles.com')) {
+                const krakenResult = await getKrakenfilesStream(streamUrl);
+                const videoUrl = krakenResult.url;
+                const videoType = krakenResult.type;
+
+                const fetchHeaders: Record<string, string> = {
+                    'User-Agent': FAKE_USER_AGENT,
+                    'Referer': streamUrl,
+                };
+
+                const rangeHeader = request.headers.get('range');
+                if (rangeHeader) {
+                    fetchHeaders['range'] = rangeHeader;
+                }
+
+                const videoResponse = await fetch(videoUrl, { headers: fetchHeaders });
+
+                if (!videoResponse.ok) {
+                    throw new Error(`Failed to fetch video from Krakenfiles. Status: ${videoResponse.status}`);
+                }
+
+                const responseHeaders = new Headers();
+
+                for (const [key, value] of videoResponse.headers.entries()) {
+                    if (key.toLowerCase() !== 'content-disposition') {
+                        responseHeaders.set(key, value);
+                    }
+                }
+
+                responseHeaders.set('Content-Disposition', 'inline');
+
+                if (videoType === 'mp4') {
                     responseHeaders.set('Content-Type', 'video/mp4');
                 } else {
                     const originalContentType = videoResponse.headers.get('Content-Type');
