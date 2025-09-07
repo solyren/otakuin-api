@@ -2,34 +2,31 @@ import { Elysia, t } from 'elysia';
 import { redis } from '../lib/redis';
 
 const STREAM_KEY_PREFIX = 'stream:';
-const STREAM_DATA_CACHE_PREFIX = 'cache:stream_data:';
-const STREAM_DATA_EXPIRATION_SECONDS = 3600; // 1 hour
+const FAKE_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36';
 
 // Function to handle Blogger URLs
-const getBloggerStreams = async (url: string, clientHeaders: Headers) => {
-    const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
+const getBloggerStreams = async (url: string, clientIp: string | null) => {
+    console.log(`Fetching Blogger page to get cookies and config: ${url}`);
+    
+    const fetchHeaders: Record<string, string> = {
+        'User-Agent': FAKE_USER_AGENT,
+        'Referer': url,
+    };
 
-    // Check cache first
-    const cachedStreams = await redis.get(cacheKey);
-    if (cachedStreams) {
-        console.log(`[Cache] HIT for Blogger stream data: ${url}`);
-        return cachedStreams;
+    if (clientIp) {
+        fetchHeaders['X-Forwarded-For'] = clientIp;
     }
 
-    console.log(`[Cache] MISS for Blogger stream data. Fetching Blogger URL: ${url}`);
-    const response = await fetch(url, {
-        headers: {
-            'User-Agent': clientHeaders.get('user-agent') || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
-            'Referer': url,
-        }
-    });
+    const response = await fetch(url, { headers: fetchHeaders });
 
     if (!response.ok) {
         throw new Error(`Failed to fetch video config from Blogger. Status: ${response.status}`);
     }
+
+    // Extract cookies from the response
+    const cookie = response.headers.get('set-cookie');
     const html = await response.text();
 
-    // Use string manipulation instead of regex for robustness
     const searchString = 'var VIDEO_CONFIG = ';
     const startIndex = html.indexOf(searchString);
 
@@ -45,9 +42,8 @@ const getBloggerStreams = async (url: string, clientHeaders: Headers) => {
             const videoConfig = JSON.parse(jsonString);
 
             if (videoConfig.streams && videoConfig.streams.length > 0) {
-                // Store the result in cache
-                await redis.set(cacheKey, JSON.stringify(videoConfig.streams), { ex: STREAM_DATA_EXPIRATION_SECONDS });
-                return videoConfig.streams;
+                // Return both streams and the cookie
+                return { streams: videoConfig.streams, cookie };
             }
         }
     } else {
@@ -59,7 +55,7 @@ const getBloggerStreams = async (url: string, clientHeaders: Headers) => {
 };
 
 export const stream = new Elysia()
-    .get('/anime/stream/:id', async ({ params, set, request }) => {
+    .get('/anime/stream/:id', async ({ params, set, request, ip }) => {
         const { id } = params;
 
         if (!id) {
@@ -75,41 +71,41 @@ export const stream = new Elysia()
                 return { error: 'Stream ID not found or has expired. Please fetch a new one.' };
             }
 
-            // Determine the provider from the URL
             if (streamUrl.includes('blogger.com')) {
-                const streams = await getBloggerStreams(streamUrl, request.headers);
-                if (streams && streams[0] && streams[0].play_url) {
-                    const videoUrl = streams[0].play_url;
+                // Get both streams and cookies
+                const result = await getBloggerStreams(streamUrl, ip);
+                
+                if (result && result.streams && result.streams[0] && result.streams[0].play_url) {
+                    const videoUrl = result.streams[0].play_url;
 
-                    // Fetch the video from Google's server and stream it back
-                    // This acts as a true proxy
                     const fetchHeaders: Record<string, string> = {
-                        'User-Agent': request.headers.get('user-agent') || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
-                        'Referer': streamUrl, // The key is to use the blogger page as the referer
+                        'User-Agent': FAKE_USER_AGENT,
+                        'Referer': streamUrl,
                     };
 
-                    // Forward the Range header if it exists, for seeking
+                    // Add the retrieved cookie to the request
+                    if (result.cookie) {
+                        fetchHeaders['Cookie'] = result.cookie;
+                    }
+
                     const rangeHeader = request.headers.get('range');
                     if (rangeHeader) {
                         fetchHeaders['range'] = rangeHeader;
                     }
 
-                    const videoResponse = await fetch(videoUrl, {
-                        headers: fetchHeaders
-                    });
+                    const videoResponse = await fetch(videoUrl, { headers: fetchHeaders });
 
-                    // Check if the request to Google was successful
                     if (!videoResponse.ok) {
+                        const errorBody = await videoResponse.text();
+                        console.error(`Google Video Fetch Error: Status ${videoResponse.status}, Body: ${errorBody}`);
                         throw new Error(`Failed to fetch video from Google. Status: ${videoResponse.status}`)
                     }
 
-                    // Return the response from Google directly to the client
                     return videoResponse;
                 } else {
                     throw new Error('No play_url found in streams');
                 }
             } else {
-                // Placeholder for other providers
                 set.status = 501;
                 return { error: 'This stream provider is not yet supported for proxying.' };
             }
