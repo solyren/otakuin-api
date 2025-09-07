@@ -22,18 +22,16 @@ const getDoodStream = async (url: string) => {
     const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
     const cachedResult: any = await redis.get(cacheKey);
     if (cachedResult) {
-        console.log(`[Cache] HIT for DoodStream stream data: ${url}`);
         return cachedResult;
     }
 
-    console.log(`[Cache] MISS for DoodStream stream data. Fetching DoodStream page: ${url}`);
     const response = await fetch(url, { headers: { 'User-Agent': FAKE_USER_AGENT, 'Referer': url } });
     if (!response.ok) {
         throw new Error(`Failed to fetch DoodStream page. Status: ${response.status}`);
     }
     const html = await response.text();
 
-    const passMd5Match = html.match(/\/pass_md5\/([^\']+)/);
+    const passMd5Match = html.match(/\/pass_md5\/([^']+)/);
     if (!passMd5Match || !passMd5Match[1]) {
         throw new Error('Could not find pass_md5 token on DoodStream page');
     }
@@ -59,11 +57,9 @@ const getYourUploadStream = async (url: string) => {
 
     const cachedResult: any = await redis.get(cacheKey);
     if (cachedResult) {
-        console.log(`[Cache] HIT for YourUpload stream data: ${url}`);
         return cachedResult;
     }
 
-    console.log(`[Cache] MISS for YourUpload stream data. Fetching YourUpload page: ${url}`);
     const response = await fetch(url, { headers: { 'User-Agent': FAKE_USER_AGENT } });
     if (!response.ok) {
         throw new Error(`Failed to fetch YourUpload page. Status: ${response.status}`);
@@ -86,11 +82,8 @@ const getBloggerStreams = async (url: string, clientIp: string | null) => {
     const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
     const cachedResult: any = await redis.get(cacheKey);
     if (cachedResult) {
-        console.log(`[Cache] HIT for Blogger stream data: ${url}`);
         return cachedResult;
     }
-
-    console.log(`[Cache] MISS for Blogger stream data. Fetching Blogger page to get cookies and config: ${url}`);
     
     const fetchHeaders: Record<string, string> = {
         'User-Agent': FAKE_USER_AGENT,
@@ -130,9 +123,6 @@ const getBloggerStreams = async (url: string, clientIp: string | null) => {
                 return result;
             }
         }
-    } else {
-        console.error('VIDEO_CONFIG not found. Blogger HTML response:');
-        console.error(html);
     }
 
     throw new Error('No streams found in VIDEO_CONFIG');
@@ -144,11 +134,9 @@ const getFiledonStream = async (url: string) => {
 
     const cachedResult: any = await redis.get(cacheKey);
     if (cachedResult) {
-        console.log(`[Cache] HIT for Filedon stream data: ${url}`);
         return cachedResult;
     }
 
-    console.log(`[Cache] MISS for Filedon stream data. Fetching Filedon page: ${url}`);
     const response = await fetch(url, { headers: { 'User-Agent': FAKE_USER_AGENT } });
     if (!response.ok) {
         throw new Error(`Failed to fetch Filedon page. Status: ${response.status}`);
@@ -157,9 +145,8 @@ const getFiledonStream = async (url: string) => {
     const $ = cheerio.load(html);
 
     const scriptContent = $("script").text();
-    const m3u8Match = scriptContent.match(/"(https?:\/\/[^"]+\.m3u8[^"]*)"/);
+    const m3u8Match = scriptContent.match(/"(https?:\/\/[^ vital]+\.m3u8[^ vital]*)"/);
     if (m3u8Match && m3u8Match[1]) {
-        console.log(`Found M3U8 stream in script: ${m3u8Match[1]}`);
         const result = { url: m3u8Match[1], type: 'm3u8' };
         await redis.set(cacheKey, result, { ex: STREAM_DATA_EXPIRATION_SECONDS });
         return result;
@@ -170,7 +157,6 @@ const getFiledonStream = async (url: string) => {
         const pageProps = JSON.parse(dataPage);
         const videoUrl = pageProps?.props?.url;
         if (videoUrl) {
-            console.log(`Found stream in data-page: ${videoUrl}`);
             const result = { url: videoUrl, type: 'mp4' };
             await redis.set(cacheKey, result, { ex: STREAM_DATA_EXPIRATION_SECONDS });
             return result;
@@ -186,11 +172,9 @@ const getPixeldrainStream = async (url: string) => {
 
     const cachedResult: any = await redis.get(cacheKey);
     if (cachedResult) {
-        console.log(`[Cache] HIT for Pixeldrain stream data: ${url}`);
         return cachedResult;
     }
 
-    console.log(`[Cache] MISS for Pixeldrain stream data. Fetching Pixeldrain page: ${url}`);
     const id = new URL(url).pathname.split('/').pop();
     if (!id) {
         throw new Error('Invalid Pixeldrain URL: missing ID');
@@ -220,11 +204,8 @@ const getWibufileStream = async (url: string, request: Request) => {
 
     const cachedResult: any = await redis.get(cacheKey);
     if (cachedResult) {
-        console.log(`[Cache] HIT for Wibufile stream data: ${url}`);
         return cachedResult;
     }
-
-    console.log(`[Cache] MISS for Wibufile stream data. Fetching Wibufile embed page: ${url}`);
     
     try {
         const jar = new CookieJar();
@@ -243,7 +224,6 @@ const getWibufileStream = async (url: string, request: Request) => {
         }
 
         const dynamicApiUrl = apiUrlMatch[1].startsWith('//') ? `https:${apiUrlMatch[1]}` : apiUrlMatch[1];
-        console.log(`Found dynamic Wibufile API URL: ${dynamicApiUrl}`);
 
         const { data: apiResponse } = await client.get(dynamicApiUrl, {
             headers: {
@@ -279,7 +259,6 @@ const getWibufileStream = async (url: string, request: Request) => {
         throw new Error('No valid stream URL found in the Wibufile API response.');
 
     } catch (error: any) {
-        console.error(`Error in getWibufileStream: ${error.message}`);
         throw new Error(`Failed to resolve Wibufile stream: ${error.message}`);
     }
 };
@@ -290,20 +269,17 @@ const getMp4uploadStream = async (url: string) => {
 
     const cachedResult: any = await redis.get(cacheKey);
     if (cachedResult) {
-        console.log(`[Cache] HIT for Mp4upload stream data: ${url}`);
         return cachedResult;
     }
 
-    console.log(`[Cache] MISS for Mp4upload stream data. Fetching Mp4upload page: ${url}`);
     const response = await fetch(url, { headers: { 'User-Agent': FAKE_USER_AGENT } });
     if (!response.ok) {
         throw new Error(`Failed to fetch Mp4upload page. Status: ${response.status}`);
     }
     const html = await response.text();
     
-    const urlMatch = html.match(/player\.src\({[^}]*src:\s*"([^"]+)"/);
+    const urlMatch = html.match(/player\.src\({[^{}]*src:\s*"([^"]+)"/);
     if (urlMatch && urlMatch[1]) {
-        console.log(`Found stream in script: ${urlMatch[1]}`);
         const result = { url: urlMatch[1].trim(), type: 'mp4' };
         await redis.set(cacheKey, result, { ex: STREAM_DATA_EXPIRATION_SECONDS });
         return result;
@@ -318,11 +294,9 @@ const getKrakenfilesStream = async (url: string) => {
 
     const cachedResult: any = await redis.get(cacheKey);
     if (cachedResult) {
-        console.log(`[Cache] HIT for Krakenfiles stream data: ${url}`);
         return cachedResult;
     }
 
-    console.log(`[Cache] MISS for Krakenfiles stream data. Fetching Krakenfiles page: ${url}`);
     const response = await fetch(url, { headers: { 'User-Agent': FAKE_USER_AGENT } });
     if (!response.ok) {
         throw new Error(`Failed to fetch Krakenfiles page. Status: ${response.status}`);
@@ -333,7 +307,6 @@ const getKrakenfilesStream = async (url: string) => {
     const videoSource = $("video#my-video source").attr('src');
 
     if (videoSource) {
-        console.log(`Found stream in video source: ${videoSource}`);
         const result = { url: videoSource, type: 'mp4' };
         await redis.set(cacheKey, result, { ex: STREAM_DATA_EXPIRATION_SECONDS });
         return result;

@@ -24,8 +24,6 @@ const findBestMatch = (animeDetails: any, slugList: { title: string; slug: strin
         if (search.title) {
             const searchResult = fuse.search(search.title);
             if (searchResult.length > 0) {
-                // Sort by score (ascending), then by title length (ascending)
-                // This prefers shorter titles (closer to query length) if scores are similar
                 searchResult.sort((a, b) => {
                     if (a.score !== b.score) {
                         return a.score - b.score;
@@ -34,8 +32,7 @@ const findBestMatch = (animeDetails: any, slugList: { title: string; slug: strin
                 });
 
                 const bestMatchResult = searchResult[0];
-                // If the best match is still too far off, consider it no match
-                if (bestMatchResult.score > 0.1) { // Changed from 0.3 to 0.1
+                if (bestMatchResult.score > 0.1) {
                     return null;
                 }
 
@@ -56,9 +53,19 @@ const ANIME_SAIL_SLUGS_KEY = 'slugs:animesail';
 const getManualMapKey = (source: string) => `manual_map:${source}:anilist_id_to_slug`;
 const STREAM_KEY_PREFIX = 'stream:';
 const STREAM_EXPIRATION_SECONDS = 21600; // 6 hours
+const ANILIST_CACHE_KEY_PREFIX = 'anilist:';
+const ANILIST_CACHE_EXPIRATION_SECONDS = 86400; // 24 hours
+const EPISODE_CACHE_KEY_PREFIX = 'episode:';
+const EPISODE_CACHE_EXPIRATION_SECONDS = 7200; // 2 hours
 
-// --- Get Anilist Data By Id ---
+// --- Get Anilist Data By Id (with cache) ---
 const getAnilistDataById = async (id: number) => {
+    const cacheKey = `${ANILIST_CACHE_KEY_PREFIX}${id}`;
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+        return cachedData as any;
+    }
+
     const query = `
     query ($id: Int) {
         Media (id: $id, type: ANIME) {
@@ -92,6 +99,7 @@ const getAnilistDataById = async (id: number) => {
 
         if (!response.ok) return null;
         const { data } = await response.json();
+        await redis.set(cacheKey, data.Media, { ex: ANILIST_CACHE_EXPIRATION_SECONDS });
         return data.Media;
     } catch (error) {
         return null;
@@ -189,37 +197,34 @@ export const anime = new Elysia()
             return { error: 'Invalid ID or episode number' };
         }
 
+        const cacheKey = `${EPISODE_CACHE_KEY_PREFIX}${id}:${episode}`;
+        const cachedResponse = await redis.get(cacheKey);
+        if (cachedResponse) {
+            return cachedResponse as any;
+        }
+
         const animeDetails = await getAnilistDataById(id);
         if (!animeDetails) {
             set.status = 404;
             return { error: 'Anime not found on Anilist' };
         }
 
-        const samehadakuSlugsData = await redis.hgetall(SLUGS_KEY);
-        const animesailSlugsData = await redis.hgetall(ANIME_SAIL_SLUGS_KEY);
+        const [samehadakuSlugsData, animesailSlugsData, samehadakuManualSlug, animesailManualSlug] = await Promise.all([
+            redis.hgetall(SLUGS_KEY),
+            redis.hgetall(ANIME_SAIL_SLUGS_KEY),
+            redis.hget(getManualMapKey('samehadaku'), id.toString()),
+            redis.hget(getManualMapKey('animesail'), id.toString())
+        ]);
 
         const samehadakuInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
         const animesailInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
 
-        // Manual map for Samehadaku
-        const samehadakuManualSlug = await redis.hget(getManualMapKey('samehadaku'), id.toString());
         if (samehadakuManualSlug) {
             samehadakuInfo.found_slug = samehadakuManualSlug as string;
             samehadakuInfo.found_slug_title = 'Manual Mapping';
             samehadakuInfo.match_method = 'manual';
             samehadakuInfo.episode_url = formatEpisodeSlug(process.env.SAMEHADAKU_BASE_URL, samehadakuInfo.found_slug, episode);
-        }
-
-        // Manual map for Animesail
-        const animesailManualSlug = await redis.hget(getManualMapKey('animesail'), id.toString());
-        if (animesailManualSlug) {
-            animesailInfo.found_slug = animesailManualSlug as string;
-            animesailInfo.found_slug_title = 'Manual Mapping';
-            animesailInfo.match_method = 'manual';
-            animesailInfo.episode_url = getAnimesailEpisodeUrl(animesailInfo.found_slug, episode);
-        }
-
-        if (!samehadakuInfo.found_slug && samehadakuSlugsData) {
+        } else if (samehadakuSlugsData) {
             const samehadakuSlugList = Object.entries(samehadakuSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
             const match = findBestMatch(animeDetails, samehadakuSlugList);
             if (match) {
@@ -230,7 +235,12 @@ export const anime = new Elysia()
             }
         }
 
-        if (animesailSlugsData) {
+        if (animesailManualSlug) {
+            animesailInfo.found_slug = animesailManualSlug as string;
+            animesailInfo.found_slug_title = 'Manual Mapping';
+            animesailInfo.match_method = 'manual';
+            animesailInfo.episode_url = getAnimesailEpisodeUrl(animesailInfo.found_slug, episode);
+        } else if (animesailSlugsData) {
             const animesailSlugList = Object.entries(animesailSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
             const match = findBestMatch(animeDetails, animesailSlugList);
             if (match) {
@@ -246,20 +256,17 @@ export const anime = new Elysia()
             return { error: `Could not find a matching slug for ID ${id} from either source.` };
         }
 
-        let samehadakuEmbeds = [];
-        if (samehadakuInfo.episode_url) {
-            samehadakuEmbeds = await getSamehadakuEmbeds(samehadakuInfo.episode_url);
-        }
+        const [samehadakuEmbeds, animesailEmbeds] = await Promise.all([
+            samehadakuInfo.episode_url ? getSamehadakuEmbeds(samehadakuInfo.episode_url) : Promise.resolve([]),
+            animesailInfo.episode_url ? getAnimesailEmbeds(animesailInfo.episode_url) : Promise.resolve([])
+        ]);
 
-        let animesailEmbeds = [];
-        if (animesailInfo.episode_url) {
-            animesailEmbeds = await getAnimesailEmbeds(animesailInfo.episode_url);
-        }
+        const [samehadakuStreams, animesailStreams] = await Promise.all([
+            generateStreamIds(samehadakuEmbeds),
+            generateStreamIds(animesailEmbeds)
+        ]);
 
-        const samehadakuStreams = await generateStreamIds(samehadakuEmbeds);
-        const animesailStreams = await generateStreamIds(animesailEmbeds);
-
-        return {
+        const response = {
             anilist_id: id,
             episode: episode,
             sources: {
@@ -271,6 +278,10 @@ export const anime = new Elysia()
                 animesail: animesailStreams,
             }
         };
+
+        await redis.set(cacheKey, response, { ex: EPISODE_CACHE_EXPIRATION_SECONDS });
+
+        return response;
 
     }, {
         params: t.Object({

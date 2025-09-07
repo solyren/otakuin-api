@@ -23,7 +23,6 @@ const animesailFetchOptions = {
 
 // --- Resolve Player ---
 async function resolvePlayer(url: string, playerName: string): Promise<string | null> {
-    console.log(`Resolving ${playerName} URL: ${url}`);
     try {
         const headers = {
             'User-Agent': FAKE_USER_AGENT,
@@ -36,13 +35,10 @@ async function resolvePlayer(url: string, playerName: string): Promise<string | 
         const videoSource = $('video source').first().attr('src');
 
         if (videoSource) {
-            console.log(`Found ${playerName} stream source: ${videoSource}`);
             return videoSource;
         }
-        console.log(`Could not find video source in ${playerName} HTML.`);
         return null;
     } catch (error) {
-        console.error(`Failed to resolve ${playerName} URL ${url}:`, error);
         return null;
     }
 }
@@ -52,7 +48,6 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
     try {
         const response = await fetch(url);
         if (!response.ok) {
-            console.error(`Failed to fetch Samehadaku page: ${url}`);
             return [];
         }
         const html = await response.text();
@@ -62,7 +57,6 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
         const post_id = playerOptions.first().data('post');
 
         if (!post_id) {
-            console.error('Could not find post_id on Samehadaku page.');
             return [];
         }
 
@@ -96,8 +90,6 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
 
                     if (resolvedUrl) {
                         embeds.push({ server: serverName, url: resolvedUrl });
-                    } else {
-                        console.warn(`Skipping unresolved URL from Samehadaku for server: ${serverName}`);
                     }
                 }
             }
@@ -105,7 +97,6 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
         return embeds;
 
     } catch (error) {
-        console.error('Error scraping Samehadaku embeds:', error);
         return [];
     }
 }
@@ -115,7 +106,6 @@ async function getAnimesailEmbeds(url: string): Promise<any[]> {
     try {
         const response = await fetch(url, animesailFetchOptions);
         if (!response.ok) {
-            console.error(`Failed to fetch AnimeSail page: ${url}`);
             return [];
         }
         const html = await response.text();
@@ -145,19 +135,16 @@ async function getAnimesailEmbeds(url: string): Promise<any[]> {
 
                     if (resolvedUrl) {
                         embeds.push({ server: serverName, url: resolvedUrl });
-                    } else {
-                        console.warn(`Skipping unresolved URL for server: ${serverName}`);
                     }
                 }
             } catch (e) {
-                console.error(`Failed to process embed for server: ${serverName}`, e);
+                // ignore
             }
         }
 
         return embeds;
 
     } catch (error) {
-        console.error('Error scraping AnimeSail embeds:', error);
         return [];
     }
 }
