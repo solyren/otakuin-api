@@ -100,6 +100,7 @@ const generateStreamIds = async (embeds: any[]): Promise<any[]> => {
         pipeline.set(`${STREAM_KEY_PREFIX}${streamId}`, embed.url, { ex: STREAM_EXPIRATION_SECONDS });
         return {
             server: embed.server,
+            url: embed.url,
             stream_id: streamId
         };
     }).filter(Boolean); // Filter out any null entries
