@@ -4,9 +4,56 @@ import Fuse from 'fuse.js';
 import { getSamehadakuEmbeds, getAnimesailEmbeds } from '../lib/embeds';
 import { randomBytes } from 'crypto';
 
+// --- Find Best Match ---
+const findBestMatch = (animeDetails: any, slugList: { title: string; slug: string }[]) => {
+    if (!slugList || slugList.length === 0) return null;
+
+    const fuse = new Fuse(slugList, {
+        keys: ['title'],
+        includeScore: true,
+        threshold: 0.4, // A bit more lenient to get more results for sorting
+    });
+
+    const titlesToSearch = [
+        { source: 'romaji', title: animeDetails.title.romaji },
+        { source: 'english', title: animeDetails.title.english },
+        { source: 'native', title: animeDetails.title.native },
+    ];
+
+    for (const search of titlesToSearch) {
+        if (search.title) {
+            const searchResult = fuse.search(search.title);
+            if (searchResult.length > 0) {
+                // Sort by score (ascending), then by title length (ascending)
+                // This prefers shorter titles (closer to query length) if scores are similar
+                searchResult.sort((a, b) => {
+                    if (a.score !== b.score) {
+                        return a.score - b.score;
+                    }
+                    return a.item.title.length - b.item.title.length;
+                });
+
+                const bestMatchResult = searchResult[0];
+                // If the best match is still too far off, consider it no match
+                if (bestMatchResult.score > 0.1) { // Changed from 0.3 to 0.1
+                    return null;
+                }
+
+                const bestMatch = bestMatchResult.item;
+                return {
+                    found_slug: bestMatch.slug,
+                    found_slug_title: bestMatch.title,
+                    match_method: search.source,
+                };
+            }
+        }
+    }
+    return null;
+};
+
 const SLUGS_KEY = 'slugs:samehadaku';
 const ANIME_SAIL_SLUGS_KEY = 'slugs:animesail';
-const MANUAL_MAP_KEY = 'manual_map:anilist_id_to_slug';
+const getManualMapKey = (source: string) => `manual_map:${source}:anilist_id_to_slug`;
 const STREAM_KEY_PREFIX = 'stream:';
 const STREAM_EXPIRATION_SECONDS = 21600; // 6 hours
 
@@ -154,57 +201,43 @@ export const anime = new Elysia()
         const samehadakuInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
         const animesailInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
 
-        const manualSlug = await redis.hget(MANUAL_MAP_KEY, id.toString());
-        if (manualSlug) {
-            samehadakuInfo.found_slug = manualSlug as string;
+        // Manual map for Samehadaku
+        const samehadakuManualSlug = await redis.hget(getManualMapKey('samehadaku'), id.toString());
+        if (samehadakuManualSlug) {
+            samehadakuInfo.found_slug = samehadakuManualSlug as string;
             samehadakuInfo.found_slug_title = 'Manual Mapping';
             samehadakuInfo.match_method = 'manual';
             samehadakuInfo.episode_url = formatEpisodeSlug(process.env.SAMEHADAKU_BASE_URL, samehadakuInfo.found_slug, episode);
         }
 
+        // Manual map for Animesail
+        const animesailManualSlug = await redis.hget(getManualMapKey('animesail'), id.toString());
+        if (animesailManualSlug) {
+            animesailInfo.found_slug = animesailManualSlug as string;
+            animesailInfo.found_slug_title = 'Manual Mapping';
+            animesailInfo.match_method = 'manual';
+            animesailInfo.episode_url = getAnimesailEpisodeUrl(animesailInfo.found_slug, episode);
+        }
+
         if (!samehadakuInfo.found_slug && samehadakuSlugsData) {
             const samehadakuSlugList = Object.entries(samehadakuSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
-            const samehadakuFuse = new Fuse(samehadakuSlugList, { keys: ['title'], includeScore: true, threshold: 0.2 });
-            const titlesToSearch = [
-                { source: 'romaji', title: animeDetails.title.romaji },
-                { source: 'english', title: animeDetails.title.english },
-                { source: 'native', title: animeDetails.title.native },
-            ];
-            for (const search of titlesToSearch) {
-                if (search.title) {
-                    const searchResult = samehadakuFuse.search(search.title);
-                    if (searchResult.length > 0) {
-                        const bestMatch = searchResult[0].item;
-                        samehadakuInfo.found_slug = bestMatch.slug;
-                        samehadakuInfo.found_slug_title = bestMatch.title;
-                        samehadakuInfo.match_method = search.source;
-                        samehadakuInfo.episode_url = formatEpisodeSlug(process.env.SAMEHADAKU_BASE_URL, samehadakuInfo.found_slug, episode);
-                        break;
-                    }
-                }
+            const match = findBestMatch(animeDetails, samehadakuSlugList);
+            if (match) {
+                samehadakuInfo.found_slug = match.found_slug;
+                samehadakuInfo.found_slug_title = match.found_slug_title;
+                samehadakuInfo.match_method = match.match_method;
+                samehadakuInfo.episode_url = formatEpisodeSlug(process.env.SAMEHADAKU_BASE_URL, match.found_slug, episode);
             }
         }
 
         if (animesailSlugsData) {
             const animesailSlugList = Object.entries(animesailSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
-            const animesailFuse = new Fuse(animesailSlugList, { keys: ['title'], includeScore: true, threshold: 0.2 });
-            const titlesToSearch = [
-                { source: 'romaji', title: animeDetails.title.romaji },
-                { source: 'english', title: animeDetails.title.english },
-                { source: 'native', title: animeDetails.title.native },
-            ];
-            for (const search of titlesToSearch) {
-                if (search.title) {
-                    const searchResult = animesailFuse.search(search.title);
-                    if (searchResult.length > 0) {
-                        const bestMatch = searchResult[0].item;
-                        animesailInfo.found_slug = bestMatch.slug;
-                        animesailInfo.found_slug_title = bestMatch.title;
-                        animesailInfo.match_method = search.source;
-                        animesailInfo.episode_url = getAnimesailEpisodeUrl(animesailInfo.found_slug, episode);
-                        break;
-                    }
-                }
+            const match = findBestMatch(animeDetails, animesailSlugList);
+            if (match) {
+                animesailInfo.found_slug = match.found_slug;
+                animesailInfo.found_slug_title = match.found_slug_title;
+                animesailInfo.match_method = match.match_method;
+                animesailInfo.episode_url = getAnimesailEpisodeUrl(match.found_slug, episode);
             }
         }
 

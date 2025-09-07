@@ -1,33 +1,40 @@
-
 import { redis } from './lib/redis';
 import fs from 'fs/promises';
 import path from 'path';
 
-const MANUAL_MAP_KEY = 'manual_map:anilist_id_to_slug';
-const MAP_FILE_PATH = path.join(__dirname, 'data', 'manual_map.json');
+const getManualMapKey = (source: string) => `manual_map:${source}:anilist_id_to_slug`;
+const getMapFilePath = (source: string) => path.join(__dirname, 'data', `manual_map_${source}.json`);
 
-const readMapFile = async (): Promise<Record<string, string>> => {
+const readMapFile = async (source: string): Promise<Record<string, string>> => {
+    const filePath = getMapFilePath(source);
     try {
-        const fileContent = await fs.readFile(MAP_FILE_PATH, 'utf-8');
+        const fileContent = await fs.readFile(filePath, 'utf-8');
         return JSON.parse(fileContent);
     } catch (error) {
-        // If file doesn't exist or is invalid json, start with an empty object
-        console.warn('Could not read map file, starting fresh.');
+        console.warn(`Could not read map file for ${source}, starting fresh.`);
         return {};
     }
 };
 
-const writeMapFile = async (data: Record<string, string>) => {
-    await fs.writeFile(MAP_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+const writeMapFile = async (source: string, data: Record<string, string>) => {
+    const filePath = getMapFilePath(source);
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
 };
 
 const mapIdToSlug = async () => {
-    const anilistId = process.argv[2];
-    const slug = process.argv[3];
+    const source = process.argv[2];
+    const anilistId = process.argv[3];
+    const slug = process.argv[4];
 
-    if (!anilistId || !slug) {
-        console.error('Error: Please provide both an Anilist ID and a slug.');
-        console.log('Usage: bun run map <anilistId> <slug>');
+    if (!source || !anilistId || !slug) {
+        console.error('Error: Please provide source, Anilist ID, and a slug.');
+        console.log('Usage: bun run map <source> <anilistId> <slug>');
+        console.log('Available sources: samehadaku, animesail');
+        process.exit(1);
+    }
+
+    if (!['samehadaku', 'animesail'].includes(source)) {
+        console.error('Error: Invalid source. Must be "samehadaku" or "animesail".');
         process.exit(1);
     }
 
@@ -37,16 +44,18 @@ const mapIdToSlug = async () => {
         process.exit(1);
     }
 
+    const MANUAL_MAP_KEY = getManualMapKey(source);
+    
     try {
         // Update the JSON file
-        const mapData = await readMapFile();
+        const mapData = await readMapFile(source);
         mapData[id] = slug;
-        await writeMapFile(mapData);
-        console.log(`Successfully updated ${MAP_FILE_PATH}`);
+        await writeMapFile(source, mapData);
+        console.log(`Successfully updated ${getMapFilePath(source)}`);
 
         // Also update Redis for fast lookups
         await redis.hset(MANUAL_MAP_KEY, { [id]: slug });
-        console.log(`Successfully mapped Anilist ID ${id} to slug in Redis: ${slug}`);
+        console.log(`Successfully mapped Anilist ID ${id} to slug in Redis for ${source}: ${slug}`);
 
     } catch (error) {
         console.error('Failed to map ID to slug:', error);
