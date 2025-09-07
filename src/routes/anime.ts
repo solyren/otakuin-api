@@ -1,11 +1,15 @@
+
 import { Elysia, t } from 'elysia';
 import { redis } from '../lib/redis';
 import Fuse from 'fuse.js';
 import { getSamehadakuEmbeds, getAnimesailEmbeds } from '../lib/scraper_embeds';
+import { randomBytes } from 'crypto';
 
 const SLUGS_KEY = 'slugs:samehadaku';
-const ANIME_SAIL_SLUGS_KEY = 'slugs:animesail'; // New constant
+const ANIME_SAIL_SLUGS_KEY = 'slugs:animesail';
 const MANUAL_MAP_KEY = 'manual_map:anilist_id_to_slug';
+const STREAM_KEY_PREFIX = 'stream:';
+const STREAM_EXPIRATION_SECONDS = 21600; // 6 hours
 
 const getAnilistDataById = async (id: number) => {
     const query = `
@@ -47,30 +51,24 @@ const getAnilistDataById = async (id: number) => {
     }
 };
 
-// Helper function to format the slug for an episode
 const formatEpisodeSlug = (domain: string, pathSlug: string, episode: number) => {
     let baseUrl = domain;
     let cleanedPath = pathSlug;
 
-    // Check if pathSlug is already a full URL
     if (pathSlug.startsWith('http://') || pathSlug.startsWith('https://')) {
         const urlObj = new URL(pathSlug);
         baseUrl = urlObj.origin;
         cleanedPath = urlObj.pathname;
     }
 
-    // Remove leading /anime/ if present, and trailing slash
     cleanedPath = cleanedPath.replace(/^\/anime\//, '').replace(/\/$/, '');
-
     return `${baseUrl}/${cleanedPath}-episode-${episode}/`;
 };
 
-// New helper for Animesail specific slug manipulation
 const getAnimesailEpisodeUrl = (foundEpisodeSlug: string, requestedEpisode: number): string => {
-    let baseUrl = 'https://154.26.137.28'; // Default base for Animesail
+    let baseUrl = 'https://154.26.137.28';
     let path = foundEpisodeSlug;
 
-    // Check if foundEpisodeSlug is already a full URL
     if (foundEpisodeSlug.startsWith('http://') || foundEpisodeSlug.startsWith('https://')) {
         const urlObj = new URL(foundEpisodeSlug);
         baseUrl = urlObj.origin;
@@ -78,7 +76,6 @@ const getAnimesailEpisodeUrl = (foundEpisodeSlug: string, requestedEpisode: numb
     }
 
     const pathParts = path.split('/').filter(Boolean);
-
     let baseSeriesPath = '';
     const lastPart = pathParts[pathParts.length - 1];
     const episodeIndex = lastPart.lastIndexOf('-episode-');
@@ -87,12 +84,31 @@ const getAnimesailEpisodeUrl = (foundEpisodeSlug: string, requestedEpisode: numb
     } else {
         baseSeriesPath = lastPart;
     }
-
     return `${baseUrl}/${baseSeriesPath}-episode-${requestedEpisode}/`;
 };
 
-// New helper for Animesail specific slug manipulation
+// Helper to generate stream IDs and store them in Redis
+const generateStreamIds = async (embeds: any[]): Promise<any[]> => {
+    if (!embeds || embeds.length === 0) {
+        return [];
+    }
 
+    const pipeline = redis.pipeline();
+    const processedEmbeds = embeds.map(embed => {
+        if (!embed.url) return null; // Skip embeds without a URL
+        const streamId = randomBytes(4).toString('hex');
+        pipeline.set(`${STREAM_KEY_PREFIX}${streamId}`, embed.url, { ex: STREAM_EXPIRATION_SECONDS });
+        return {
+            server: embed.server,
+            stream_id: streamId
+        };
+    }).filter(Boolean); // Filter out any null entries
+
+    if (processedEmbeds.length > 0) {
+        await pipeline.exec();
+    }
+    return processedEmbeds;
+};
 
 export const anime = new Elysia()
     .get('/anime/:id', async ({ params, set }) => {
@@ -101,14 +117,11 @@ export const anime = new Elysia()
             set.status = 400;
             return { error: 'Invalid ID' };
         }
-
         const animeDetails = await getAnilistDataById(id);
-
         if (!animeDetails) {
             set.status = 404;
             return { error: 'Anime not found' };
         }
-
         return {
             id: animeDetails.id,
             title: animeDetails.title.romaji || animeDetails.title.english,
@@ -133,47 +146,27 @@ export const anime = new Elysia()
         }
 
         const samehadakuSlugsData = await redis.hgetall(SLUGS_KEY);
-        const animesailSlugsData = await redis.hgetall(ANIME_SAIL_SLUGS_KEY); 
+        const animesailSlugsData = await redis.hgetall(ANIME_SAIL_SLUGS_KEY);
 
-        const samehadakuInfo: any = {
-            found_slug_title: null,
-            found_slug: null,
-            episode_url: null,
-            match_method: null
-        };
-        const animesailInfo: any = {
-            found_slug_title: null,
-            found_slug: null,
-            episode_url: null,
-            match_method: null
-        };
+        const samehadakuInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
+        const animesailInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
 
-        // 1. Check for a manual mapping first (applies to Samehadaku for now, can be extended)
         const manualSlug = await redis.hget(MANUAL_MAP_KEY, id.toString());
-
         if (manualSlug) {
-            // Assuming manual map is primarily for samehadaku for now
             samehadakuInfo.found_slug = manualSlug as string;
             samehadakuInfo.found_slug_title = 'Manual Mapping';
             samehadakuInfo.match_method = 'manual';
             samehadakuInfo.episode_url = formatEpisodeSlug('https://v1.samehadaku.how', samehadakuInfo.found_slug, episode);
         }
 
-        // If no manual map, proceed with fuzzy search for Samehadaku
         if (!samehadakuInfo.found_slug && samehadakuSlugsData) {
             const samehadakuSlugList = Object.entries(samehadakuSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
-            const samehadakuFuse = new Fuse(samehadakuSlugList, {
-                keys: ['title'],
-                includeScore: true,
-                threshold: 0.2
-            });
-
+            const samehadakuFuse = new Fuse(samehadakuSlugList, { keys: ['title'], includeScore: true, threshold: 0.2 });
             const titlesToSearch = [
                 { source: 'romaji', title: animeDetails.title.romaji },
                 { source: 'english', title: animeDetails.title.english },
                 { source: 'native', title: animeDetails.title.native },
             ];
-
             for (const search of titlesToSearch) {
                 if (search.title) {
                     const searchResult = samehadakuFuse.search(search.title);
@@ -189,21 +182,14 @@ export const anime = new Elysia()
             }
         }
 
-        // Fuzzy search for Animesail
         if (animesailSlugsData) {
             const animesailSlugList = Object.entries(animesailSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
-            const animesailFuse = new Fuse(animesailSlugList, {
-                keys: ['title'],
-                includeScore: true,
-                threshold: 0.2
-            });
-
+            const animesailFuse = new Fuse(animesailSlugList, { keys: ['title'], includeScore: true, threshold: 0.2 });
             const titlesToSearch = [
                 { source: 'romaji', title: animeDetails.title.romaji },
                 { source: 'english', title: animeDetails.title.english },
                 { source: 'native', title: animeDetails.title.native },
             ];
-
             for (const search of titlesToSearch) {
                 if (search.title) {
                     const searchResult = animesailFuse.search(search.title);
@@ -212,20 +198,18 @@ export const anime = new Elysia()
                         animesailInfo.found_slug = bestMatch.slug;
                         animesailInfo.found_slug_title = bestMatch.title;
                         animesailInfo.match_method = search.source;
-                        animesailInfo.episode_url = getAnimesailEpisodeUrl(animesailInfo.found_slug, episode); // Use new helper
+                        animesailInfo.episode_url = getAnimesailEpisodeUrl(animesailInfo.found_slug, episode);
                         break;
                     }
                 }
             }
         }
 
-        // If neither source found a slug, return 404
         if (!samehadakuInfo.found_slug && !animesailInfo.found_slug) {
             set.status = 404;
             return { error: `Could not find a matching slug for ID ${id} from either source.` };
         }
 
-        // Scrape for embeds
         let samehadakuEmbeds = [];
         if (samehadakuInfo.episode_url) {
             samehadakuEmbeds = await getSamehadakuEmbeds(samehadakuInfo.episode_url);
@@ -236,14 +220,19 @@ export const anime = new Elysia()
             animesailEmbeds = await getAnimesailEmbeds(animesailInfo.episode_url);
         }
 
+        const samehadakuStreams = await generateStreamIds(samehadakuEmbeds);
+        const animesailStreams = await generateStreamIds(animesailEmbeds);
+
         return {
             anilist_id: id,
             episode: episode,
-            samehadaku_info: samehadakuInfo,
-            animesail_info: animesailInfo,
-            embeds: {
-                samehadaku: samehadakuEmbeds,
-                animesail: animesailEmbeds,
+            sources: {
+                samehadaku: samehadakuInfo,
+                animesail: animesailInfo,
+            },
+            streams: {
+                samehadaku: samehadakuStreams,
+                animesail: animesailStreams,
             }
         };
 
