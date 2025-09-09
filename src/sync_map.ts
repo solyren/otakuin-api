@@ -3,10 +3,27 @@ import { redis } from './lib/redis';
 import fs from 'fs/promises';
 import path from 'path';
 
-const MANUAL_MAP_KEY = 'manual_map:anilist_id_to_slug';
-const MAP_FILE_PATH = path.join(__dirname, 'data', 'manual_map.json');
+const getManualMapKey = (source: string) => `manual_map:${source}:anilist_id_to_slug`;
+const getMapFilePath = (source: string) => path.join(__dirname, 'data', `manual_map_${source}.json`);
 
 const syncMapToRedis = async () => {
+    const source = process.argv[2];
+
+    if (!source) {
+        console.error('Error: Please provide a source.');
+        console.log('Usage: bun run sync:map <source>');
+        console.log('Available sources: samehadaku, animesail');
+        process.exit(1);
+    }
+
+    if (!['samehadaku', 'animesail'].includes(source)) {
+        console.error('Error: Invalid source. Must be "samehadaku" or "animesail".');
+        process.exit(1);
+    }
+
+    const MAP_FILE_PATH = getMapFilePath(source);
+    const MANUAL_MAP_KEY = getManualMapKey(source);
+
     console.log(`Reading manual map from: ${MAP_FILE_PATH}`);
     let mapData: Record<string, string> = {};
 
