@@ -3,6 +3,7 @@ import { redis } from '../lib/redis';
 import Fuse from 'fuse.js';
 import { getSamehadakuEmbeds, getAnimesailEmbeds } from '../lib/embeds';
 import { randomBytes } from 'crypto';
+import * as cheerio from 'cheerio';
 
 // --- Find Best Match ---
 const findBestMatch = (animeDetails: any, slugList: { title: string; slug: string }[]) => {
@@ -57,6 +58,8 @@ const ANILIST_CACHE_KEY_PREFIX = 'anilist:';
 const ANILIST_CACHE_EXPIRATION_SECONDS = 86400; // 24 hours
 const EPISODE_CACHE_KEY_PREFIX = 'episode:';
 const EPISODE_CACHE_EXPIRATION_SECONDS = 7200; // 2 hours
+const EPISODE_LIST_CACHE_KEY_PREFIX = 'episode_list:';
+const EPISODE_LIST_CACHE_EXPIRATION_SECONDS = 7200; // 2 hours
 
 // --- Get Anilist Data By Id (with cache) ---
 const getAnilistDataById = async (id: number) => {
@@ -105,6 +108,66 @@ const getAnilistDataById = async (id: number) => {
         return null;
     }
 };
+
+// --- Get Animesail Episode List ---
+const getAnimesailEpisodeList = async (id: number, animeDetails: any) => {
+    const cacheKey = `${EPISODE_LIST_CACHE_KEY_PREFIX}${id}`;
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+        return cachedData as any;
+    }
+
+    const animesailSlugsData = await redis.hgetall(ANIME_SAIL_SLUGS_KEY);
+    const animesailManualSlug = await redis.hget(getManualMapKey('animesail'), id.toString());
+
+    let animesailSlug: string | null = null;
+    if (animesailManualSlug) {
+        animesailSlug = animesailManualSlug as string;
+    } else if (animesailSlugsData) {
+        const animesailSlugList = Object.entries(animesailSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
+        const match = findBestMatch(animeDetails, animesailSlugList);
+        if (match) {
+            animesailSlug = match.found_slug;
+        }
+    }
+
+    if (!animesailSlug) {
+        return [];
+    }
+
+    const animesailUrl = animesailSlug.startsWith('http') ? animesailSlug : `${process.env.ANIMESAIL_BASE_URL}${animesailSlug}`;
+
+    const response = await fetch(animesailUrl, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+            'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=ID'
+        }
+    });
+
+    if (!response.ok) {
+        return [];
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    const episodeList: { episode: number; title: string; url: string }[] = [];
+    $('ul.daftar li a').each((i, el) => {
+        const title = $(el).text().trim();
+        const url = $(el).attr('href') || '';
+        const episodeMatch = title.match(/Episode\s+(\d+)/i);
+        const episode = episodeMatch ? parseInt(episodeMatch[1]) : 0;
+
+        if (episode > 0) {
+            episodeList.push({ episode, title, url });
+        }
+    });
+
+    const result = episodeList.sort((a, b) => a.episode - b.episode);
+    await redis.set(cacheKey, result, { ex: EPISODE_LIST_CACHE_EXPIRATION_SECONDS });
+
+    return result;
+}
 
 // --- Format Episode Slug ---
 const formatEpisodeSlug = (domain: string, pathSlug: string, episode: number) => {
@@ -180,12 +243,16 @@ export const anime = new Elysia({ prefix: '/anime' })
             set.status = 404;
             return { error: 'Anime not found' };
         }
+
+        const episodeList = await getAnimesailEpisodeList(id, animeDetails);
+
         return {
             id: animeDetails.id,
             title: animeDetails.title.romaji || animeDetails.title.english,
             synopsis: animeDetails.description,
             genres: animeDetails.genres,
-            thumbnail: animeDetails.coverImage.large || animeDetails.coverImage.medium
+            thumbnail: animeDetails.coverImage.large || animeDetails.coverImage.medium,
+            episodes: episodeList
         };
     }, {
         detail: {
