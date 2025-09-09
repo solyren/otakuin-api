@@ -78,11 +78,36 @@ const getAnilistDataById = async (id: number) => {
                 english
                 native
             }
+            status
             description(asHtml: false)
-            genres
+            startDate {
+                year
+                month
+                day
+            }
+            endDate {
+                year
+                month
+                day
+            }
+            seasonYear
+            episodes
+            duration
+            trailer {
+                id
+                site
+                thumbnail
+            }
             coverImage {
                 large
-                medium
+            }
+            bannerImage
+            genres
+            averageScore
+            studios {
+                nodes {
+                    name
+                }
             }
         }
     }
@@ -249,9 +274,19 @@ export const anime = new Elysia({ prefix: '/anime' })
         return {
             id: animeDetails.id,
             title: animeDetails.title.romaji || animeDetails.title.english,
-            synopsis: animeDetails.description,
+            status: animeDetails.status,
+            description: animeDetails.description,
+            startDate: animeDetails.startDate,
+            endDate: animeDetails.endDate,
+            year: animeDetails.seasonYear,
+            episodes: animeDetails.episodes,
+            duration: animeDetails.duration,
+            trailer: animeDetails.trailer,
+            coverImage: animeDetails.coverImage.large,
+            bannerImage: animeDetails.bannerImage,
             genres: animeDetails.genres,
-            thumbnail: animeDetails.coverImage.large || animeDetails.coverImage.medium,
+            averageScore: animeDetails.averageScore,
+            studios: animeDetails.studios && animeDetails.studios.nodes ? animeDetails.studios.nodes.map((studio: any) => studio.name) : [],
             episodes: episodeList
         };
     }, {
