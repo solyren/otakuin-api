@@ -11,8 +11,11 @@ API tidak resmi yang simpel tapi powerful untuk streaming anime, mengambil data 
 - ✅ **Daftar Anime Terbaru:** Dapetin list anime yang baru rilis langsung dari sumbernya.
 - ✅ **Detail Anime Lengkap:** Info detail dari Anilist (sinopsis, genre, gambar, dll).
 - ✅ **Multi-sumber Stream:** Gak cuma satu, tapi cari link dari beberapa source (Samehadaku, Animesail).
+- ✅ **Prioritas Sumber:** Mengambil daftar episode dari Samehadaku terlebih dahulu, dengan Animesail sebagai fallback.
+- ✅ **Anti-Redirect:** Sistem cerdas untuk scraper Samehadaku untuk mencegah data yang tidak akurat.
 - ✅ **Proxy Stream:** Nonton langsung lewat API tanpa ribet, IP kamu lebih aman.
 - ✅ **Caching Cerdas:** Pakai Redis buat nge-cache data, jadi akses lebih ngebut.
+- ✅ **Cache Real-time:** Daftar episode di-cache hanya 5 menit agar data tetap *fresh*.
 - ✅ **Dokumentasi Interaktif:** Dokumentasi lengkap dan bisa langsung dicoba pake Swagger.
 
 ### ⚠️ Peringatan
@@ -26,7 +29,7 @@ API ini bergantung pada *scraper* untuk mengambil konten dari situs pihak ketiga
     <img src="https://bun.sh/logo.svg" alt="Bun" width="45" height="45"/>
   </a>
   <a href="https://elysiajs.com/" target="_blank">
-    <img src="https://elysiajs.com/assets/logo.svg" alt="ElysiaJS" width="45" height="45"/>
+    ElysiaJS
   </a>
   <a href="https://www.typescriptlang.org/" target="_blank">
     <img src="https://cdn.simpleicons.org/typescript/3178C6" alt="TypeScript" width="45" height="45"/>
