@@ -59,7 +59,7 @@ const ANILIST_CACHE_EXPIRATION_SECONDS = 86400; // 24 hours
 const EPISODE_CACHE_KEY_PREFIX = 'episode:';
 const EPISODE_CACHE_EXPIRATION_SECONDS = 7200; // 2 hours
 const EPISODE_LIST_CACHE_KEY_PREFIX = 'episode_list:';
-const EPISODE_LIST_CACHE_EXPIRATION_SECONDS = 7200; // 2 hours
+const EPISODE_LIST_CACHE_EXPIRATION_SECONDS = 300; // 5 minutes
 
 // --- Get Anilist Data By Id (with cache) ---
 const getAnilistDataById = async (id: number) => {
@@ -134,14 +134,64 @@ const getAnilistDataById = async (id: number) => {
     }
 };
 
-// --- Get Animesail Episode List ---
-const getAnimesailEpisodeList = async (id: number, animeDetails: any) => {
-    const cacheKey = `${EPISODE_LIST_CACHE_KEY_PREFIX}${id}`;
-    const cachedData = await redis.get(cacheKey);
-    if (cachedData) {
-        return cachedData as any;
+// --- Get Samehadaku Episode List ---
+const getSamehadakuEpisodeList = async (id: number, animeDetails: any) => {
+    const samehadakuSlugsData = await redis.hgetall(SLUGS_KEY);
+    const samehadakuManualSlug = await redis.hget(getManualMapKey('samehadaku'), id.toString());
+
+    let samehadakuSlug: string | null = null;
+    if (samehadakuManualSlug) {
+        samehadakuSlug = samehadakuManualSlug as string;
+    } else if (samehadakuSlugsData) {
+        const samehadakuSlugList = Object.entries(samehadakuSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
+        const match = findBestMatch(animeDetails, samehadakuSlugList);
+        if (match) {
+            samehadakuSlug = match.found_slug;
+        }
     }
 
+    if (!samehadakuSlug) {
+        return [];
+    }
+
+    const samehadakuUrl = samehadakuSlug.startsWith('http') ? samehadakuSlug : `${process.env.SAMEHADAKU_BASE_URL}/anime${samehadakuSlug.startsWith('/') ? '' : '/'}${samehadakuSlug}`;
+
+    const response = await fetch(samehadakuUrl, { redirect: 'follow' });
+
+    const finalUrl = response.url;
+    if (!finalUrl.includes(samehadakuSlug)) {
+        console.log(`Redirect detected for slug ${samehadakuSlug}. Expected ${samehadakuUrl}, got ${finalUrl}.`);
+        return [];
+    }
+
+    if (!response.ok) {
+        return [];
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    const episodeList: { episode: number; title: string; url: string }[] = [];
+    $('div.lstepsiode.listeps ul li').each((i, el) => {
+        const linkElement = $(el).find('.lchx a');
+        const title = linkElement.text().trim();
+        const url = linkElement.attr('href');
+
+        if (title && url) {
+            const episodeMatch = title.match(/Episode\s+(\d+(\.\d+)?)/i);
+            const episode = episodeMatch ? parseFloat(episodeMatch[1]) : 0;
+
+            if (episode > 0) {
+                episodeList.push({ episode, title, url });
+            }
+        }
+    });
+
+    return episodeList.sort((a, b) => a.episode - b.episode);
+}
+
+// --- Get Animesail Episode List ---
+const getAnimesailEpisodeList = async (id: number, animeDetails: any) => {
     const animesailSlugsData = await redis.hgetall(ANIME_SAIL_SLUGS_KEY);
     const animesailManualSlug = await redis.hget(getManualMapKey('animesail'), id.toString());
 
@@ -188,10 +238,7 @@ const getAnimesailEpisodeList = async (id: number, animeDetails: any) => {
         }
     });
 
-    const result = episodeList.sort((a, b) => a.episode - b.episode);
-    await redis.set(cacheKey, result, { ex: EPISODE_LIST_CACHE_EXPIRATION_SECONDS });
-
-    return result;
+    return episodeList.sort((a, b) => a.episode - b.episode);
 }
 
 // --- Format Episode Slug ---
@@ -269,7 +316,23 @@ export const anime = new Elysia({ prefix: '/anime' })
             return { error: 'Anime not found' };
         }
 
-        const episodeList = await getAnimesailEpisodeList(id, animeDetails);
+        const episodeCacheKey = `${EPISODE_LIST_CACHE_KEY_PREFIX}${id}`;
+        const cachedEpisodeList = await redis.get(episodeCacheKey);
+
+        let episodeList;
+        if (cachedEpisodeList) {
+            episodeList = cachedEpisodeList as any[];
+        } else {
+            episodeList = await getSamehadakuEpisodeList(id, animeDetails);
+
+            if (!episodeList || episodeList.length === 0) {
+                episodeList = await getAnimesailEpisodeList(id, animeDetails);
+            }
+
+            if (episodeList.length > 0) {
+                await redis.set(episodeCacheKey, episodeList, { ex: EPISODE_LIST_CACHE_EXPIRATION_SECONDS });
+            }
+        }
 
         return {
             id: animeDetails.id,
@@ -279,7 +342,7 @@ export const anime = new Elysia({ prefix: '/anime' })
             startDate: animeDetails.startDate,
             endDate: animeDetails.endDate,
             year: animeDetails.seasonYear,
-            episodes: animeDetails.episodes,
+            total_episodes: animeDetails.episodes,
             duration: animeDetails.duration,
             trailer: animeDetails.trailer,
             coverImage: animeDetails.coverImage.large,
