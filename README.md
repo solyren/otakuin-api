@@ -29,7 +29,7 @@ API ini bergantung pada *scraper* untuk mengambil konten dari situs pihak ketiga
     <img src="https://bun.sh/logo.svg" alt="Bun" width="45" height="45"/>
   </a>
   <a href="https://elysiajs.com/" target="_blank">
-    ElysiaJS
+    <img src="https://cdn.simpleicons.org/elysia/E04A8B" alt="ElysiaJS" width="45" height="45"/>
   </a>
   <a href="https://www.typescriptlang.org/" target="_blank">
     <img src="https://cdn.simpleicons.org/typescript/3178C6" alt="TypeScript" width="45" height="45"/>
