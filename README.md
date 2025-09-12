@@ -8,14 +8,14 @@ API tidak resmi yang simpel tapi powerful untuk streaming anime, mengambil data 
 
 ### ✨ Fitur Utama
 
-- ✅ **Daftar Anime Terbaru:** Dapetin list anime yang baru rilis langsung dari sumbernya.
+- ✅ **Daftar Anime Terbaru:** Menggunakan sistem scraper-worker, daftar anime terbaru diambil secara berkala di latar belakang, memastikan data selalu fresh tanpa membebani API saat diminta.
+- ✅ **Pencocokan Judul Cerdas:** Algoritma pencarian pintar untuk mencocokkan judul dari sumber scrape dengan data di Anilist, bahkan jika namanya sedikit berbeda (misal: "Season 2" vs "2nd Season").
+- ✅ **Pemetaan Manual Terintegrasi:** Kesalahan pencocokan dapat diperbaiki secara permanen menggunakan fitur pemetaan manual yang kini terintegrasi penuh dengan sistem pengambilan data halaman utama.
 - ✅ **Detail Anime Lengkap:** Info detail dari Anilist (sinopsis, genre, gambar, dll).
 - ✅ **Multi-sumber Stream:** Gak cuma satu, tapi cari link dari beberapa source (Samehadaku, Animesail).
 - ✅ **Prioritas Sumber:** Mengambil daftar episode dari Samehadaku terlebih dahulu, dengan Animesail sebagai fallback.
-- ✅ **Anti-Redirect:** Sistem cerdas untuk scraper Samehadaku untuk mencegah data yang tidak akurat.
 - ✅ **Proxy Stream:** Nonton langsung lewat API tanpa ribet, IP kamu lebih aman.
 - ✅ **Caching Cerdas:** Pakai Redis buat nge-cache data, jadi akses lebih ngebut.
-- ✅ **Cache Real-time:** Daftar episode di-cache hanya 5 menit agar data tetap *fresh*.
 - ✅ **Dokumentasi Interaktif:** Dokumentasi lengkap dan bisa langsung dicoba pake Swagger.
 
 ### ⚠️ Peringatan
@@ -46,7 +46,7 @@ API ini bergantung pada *scraper* untuk mengambil konten dari situs pihak ketiga
 - 🦊 **ElysiaJS:** Framework web yang kencang dan ramah developer.
 - 📜 **TypeScript:** Biar kode lebih aman dan terstruktur.
 - 🤖 **Cheerio:** Untuk parsing HTML (proses scraping).
-- 💾 **Redis (Upstash):** Untuk caching data biar wusss.
+- 💾 **Redis (Upstash):** Untuk caching data, antrian pekerjaan (*job queue*), dan pemetaan manual.
 - 📚 **Swagger:** Untuk dokumentasi API yang interaktif.
 
 ---
@@ -71,24 +71,26 @@ API ini bergantung pada *scraper* untuk mengambil konten dari situs pihak ketiga
     ```bash
     cp .env.example .env
     ```
-    Lalu, isi semua variabel yang ada di dalam file `.env` tersebut. Nilai di bawah ini hanya contoh.
-    ```dotenv
-    UPSTASH_REDIS_REST_URL=...
-    UPSTASH_REDIS_REST_TOKEN=...
-    SAMEHADAKU_BASE_URL=https://v1.samehadaku.how
-    ANIMESAIL_BASE_URL=https://154.26.137.28
-    ```
+    Lalu, isi semua variabel yang ada di dalam file `.env` tersebut.
 
 4.  **Jalankan Server:**
-    -   Untuk development (dengan auto-reload):
+    -   **Untuk Production:**
         ```bash
-        bun run dev
-        ```
-    -   Untuk production:
-        ```bash
+        # Menjalankan server utama dan worker di latar belakang
         bun run start
         ```
-    Server akan berjalan di `http://localhost:3000`.
+        Server akan berjalan di `http://localhost:3000`.
+
+    -   **Untuk Development:**
+        Jalankan masing-masing perintah di terminal terpisah.
+        ```bash
+        # Terminal 1: Menjalankan server utama dengan auto-reload
+        bun run dev
+        ```
+        ```bash
+        # Terminal 2: Menjalankan worker untuk memproses data
+        bun run worker
+        ```
 
 ---
 
@@ -115,6 +117,7 @@ Di sana kamu bisa lihat semua endpoint yang tersedia, parameter yang dibutuhkan,
 
 Proyek ini punya beberapa skrip tambahan yang bisa dijalankan via `bun run`:
 
+-   `bun run worker`: Menjalankan proses worker di latar belakang yang bertugas mengambil data dari Anilist secara perlahan.
 -   `bun run scrape`: Menjalankan semua scraper (Samehadaku & Animesail) untuk mengumpulkan slug anime dan menyimpannya di Redis.
 -   `bun run map`: Untuk memetakan Anilist ID ke slug anime secara manual jika otomatisasi gagal.
     ```bash
@@ -122,6 +125,10 @@ Proyek ini punya beberapa skrip tambahan yang bisa dijalankan via `bun run`:
     bun run map <source> <anilistId> <slug>
     ```
 -   `bun run sync:map`: Menyinkronkan file map manual dari `src/data/` ke Redis.
+    ```bash
+    # Contoh: bun run sync:map samehadaku
+    bun run sync:map <source>
+    ```
 
 ---
 
