@@ -4,6 +4,7 @@ import { redis } from '../lib/redis';
 import { normalizeSlug } from '../lib/anilist';
 
 const ENRICHMENT_QUEUE_KEY = 'queue:enrichment';
+const HOME_CACHE_KEY = 'home:anime_list';
 
 const scrapePage = async (page: number) => {
     const url = page === 1
@@ -27,11 +28,13 @@ const scrapePage = async (page: number) => {
         const thumbnail = $(element).find('img').attr('src');
 
         if (rawSlug && titleFromPage) {
+            const normalizedSlug = normalizeSlug(rawSlug);
             animeList.push({
-                rawSlug,
-                titleFromPage,
+                id: null, // Start with null ID
+                rawSlug, // Keep raw slug for matching in worker
+                title: titleFromPage,
                 thumbnail,
-                normalizedSlug: normalizeSlug(rawSlug)
+                normalizedSlug
             });
         }
     });
@@ -47,7 +50,6 @@ export const updateHome = async () => {
         rawAnimeList = [...rawAnimeList, ...pageAnimeList];
     }
 
-    // Filter out duplicates from the scrape itself
     const uniqueRawAnime = rawAnimeList.reduce((acc, current) => {
         if (!acc.find((item: any) => item.rawSlug === current.rawSlug)) {
             acc.push(current);
@@ -55,8 +57,13 @@ export const updateHome = async () => {
         return acc;
     }, []);
 
-    console.log(`[Scraper] Found ${uniqueRawAnime.length} unique raw anime listings to queue.`);
+    console.log(`[Scraper] Found ${uniqueRawAnime.length} unique raw anime listings.`);
 
+    // Overwrite the home cache with the correctly ordered but raw list
+    await redis.set(HOME_CACHE_KEY, JSON.stringify(uniqueRawAnime));
+    console.log(`[Scraper] Home cache updated with ${uniqueRawAnime.length} raw items in correct order.`);
+
+    // Push jobs to the queue for enrichment
     if (uniqueRawAnime.length > 0) {
         const pipeline = redis.pipeline();
         for (const anime of uniqueRawAnime) {

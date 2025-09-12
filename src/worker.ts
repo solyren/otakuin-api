@@ -5,22 +5,20 @@ import { getAnilistData, getAnilistDataById } from './lib/anilist';
 const ENRICHMENT_QUEUE_KEY = 'queue:enrichment';
 const HOME_CACHE_KEY = 'home:anime_list';
 const MANUAL_MAP_KEY = 'manual_map:samehadaku:anilist_id_to_slug';
-const MAX_HOME_LIST_SIZE = 50;
 
 // Function to get the slug part from a full Samehadaku URL
 const getSlugFromUrl = (url: string) => {
     try {
         const path = new URL(url).pathname;
-        // Assuming slug is the last part of the path, e.g., /anime/bocchi-the-rock -> bocchi-the-rock
         return path.split('/').filter(Boolean).pop() || '';
     } catch (e) {
-        return ''; // Return empty string if URL is invalid
+        return '';
     }
 }
 
 const processJob = async (jobData: any) => {
     try {
-        console.log(`[Worker] Processing job for: "${jobData.titleFromPage}"`);
+        console.log(`[Worker] Processing job for: "${jobData.title}"`);
 
         let anilistData;
 
@@ -50,36 +48,30 @@ const processJob = async (jobData: any) => {
                 thumbnail: anilistData.coverImage.large || anilistData.coverImage.medium
             };
         } else {
-            console.log(`-> [Worker] Anilist match failed for "${jobData.titleFromPage}". Storing with null ID.`);
+            // If enrichment fails, keep the original raw data
+            console.log(`-> [Worker] Anilist match failed for "${jobData.title}". Keeping raw data.`);
             finalAnimeData = {
                 id: null,
-                title: jobData.titleFromPage,
+                title: jobData.title,
                 thumbnail: jobData.thumbnail
             };
         }
 
-        // Update the main home cache
+        // Update the item in the main home cache without changing order
         const cachedData = await redis.get(HOME_CACHE_KEY);
         let homeList = cachedData ? (typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData) : [];
 
-        // Remove any old version of this anime from the list
-        homeList = homeList.filter((item: any) => {
-            if (finalAnimeData.id && item.id) {
-                return item.id !== finalAnimeData.id;
-            }
-            return item.title !== finalAnimeData.title;
-        });
+        const itemIndex = homeList.findIndex((item: any) => item.rawSlug === jobData.rawSlug);
 
-        // Add the new, enriched item to the beginning of the list
-        const updatedHomeList = [finalAnimeData, ...homeList];
-
-        // Trim the list to the max size
-        if (updatedHomeList.length > MAX_HOME_LIST_SIZE) {
-            updatedHomeList.length = MAX_HOME_LIST_SIZE;
+        if (itemIndex !== -1) {
+            console.log(`[Worker] Updating item "${finalAnimeData.title}" at index ${itemIndex}`);
+            // Preserve rawSlug and normalizedSlug in the final object for future lookups
+            homeList[itemIndex] = { ...finalAnimeData, rawSlug: jobData.rawSlug, normalizedSlug: jobData.normalizedSlug };
+            await redis.set(HOME_CACHE_KEY, JSON.stringify(homeList));
+            console.log(`[Worker] Finished job for "${finalAnimeData.title}". Home cache updated.`);
+        } else {
+            console.log(`[Worker] Could not find item with rawSlug "${jobData.rawSlug}" in home cache. It might be from an old scrape.`);
         }
-
-        await redis.set(HOME_CACHE_KEY, JSON.stringify(updatedHomeList));
-        console.log(`[Worker] Finished job for "${finalAnimeData.title}". Home cache updated.`);
 
     } catch (error) {
         console.error('[Worker] Error processing job:', error);
