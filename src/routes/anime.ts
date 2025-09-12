@@ -4,6 +4,7 @@ import Fuse from 'fuse.js';
 import { getSamehadakuEmbeds, getAnimesailEmbeds } from '../lib/embeds';
 import { randomBytes } from 'crypto';
 import * as cheerio from 'cheerio';
+import { getAnilistDataById } from '../lib/anilist';
 
 // --- Find Best Match ---
 const findBestMatch = (animeDetails: any, slugList: { title: string; slug: string }[]) => {
@@ -54,85 +55,10 @@ const ANIME_SAIL_SLUGS_KEY = 'slugs:animesail';
 const getManualMapKey = (source: string) => `manual_map:${source}:anilist_id_to_slug`;
 const STREAM_KEY_PREFIX = 'stream:';
 const STREAM_EXPIRATION_SECONDS = 21600; // 6 hours
-const ANILIST_CACHE_KEY_PREFIX = 'anilist:';
-const ANILIST_CACHE_EXPIRATION_SECONDS = 86400; // 24 hours
 const EPISODE_CACHE_KEY_PREFIX = 'episode:';
 const EPISODE_CACHE_EXPIRATION_SECONDS = 7200; // 2 hours
 const EPISODE_LIST_CACHE_KEY_PREFIX = 'episode_list:';
 const EPISODE_LIST_CACHE_EXPIRATION_SECONDS = 300; // 5 minutes
-
-// --- Get Anilist Data By Id (with cache) ---
-const getAnilistDataById = async (id: number) => {
-    const cacheKey = `${ANILIST_CACHE_KEY_PREFIX}${id}`;
-    const cachedData = await redis.get(cacheKey);
-    if (cachedData) {
-        return cachedData as any;
-    }
-
-    const query = `
-    query ($id: Int) {
-        Media (id: $id, type: ANIME) {
-            id
-            title {
-                romaji
-                english
-                native
-            }
-            status
-            description(asHtml: false)
-            startDate {
-                year
-                month
-                day
-            }
-            endDate {
-                year
-                month
-                day
-            }
-            seasonYear
-            episodes
-            duration
-            trailer {
-                id
-                site
-                thumbnail
-            }
-            coverImage {
-                large
-            }
-            bannerImage
-            genres
-            averageScore
-            studios {
-                nodes {
-                    name
-                }
-            }
-        }
-    }
-    `;
-
-    const variables = { id };
-
-    try {
-        const response = await fetch('https://graphql.anilist.co', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({ query, variables })
-        });
-
-        if (!response.ok) return null;
-        const { data } = await response.json();
-        await redis.set(cacheKey, data.Media, { ex: ANILIST_CACHE_EXPIRATION_SECONDS });
-        return data.Media;
-    } catch (error) {
-        return null;
-    }
-};
 
 // --- Get Samehadaku Episode List ---
 const getSamehadakuEpisodeList = async (id: number, animeDetails: any) => {
