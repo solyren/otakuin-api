@@ -166,7 +166,15 @@ export const getAnilistDataById = async (id: number) => {
 };
 
 // --- Search Anilist ---
+const SEARCH_CACHE_EXPIRATION_SECONDS = 3600; // 1 hour
+
 export const searchAnilist = async (search: string, page: number, perPage: number) => {
+    const cacheKey = `search:${search}:${page}:${perPage}`;
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+        return typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData;
+    }
+
     console.log(`[Anilist] Searching for: "${search}" with page: ${page} and perPage: ${perPage}`);
     const query = `
     query ($search: String, $page: Int, $perPage: Int) {
@@ -212,7 +220,7 @@ export const searchAnilist = async (search: string, page: number, perPage: numbe
         }
 
         const { data } = await response.json();
-        return {
+        const result = {
             pageInfo: data.Page.pageInfo,
             anime: data.Page.media.map((anime: any) => ({
                 id: anime.id,
@@ -221,6 +229,9 @@ export const searchAnilist = async (search: string, page: number, perPage: numbe
                 rating: anime.averageScore,
             })),
         };
+
+        await redis.set(cacheKey, JSON.stringify(result), { ex: SEARCH_CACHE_EXPIRATION_SECONDS });
+        return result;
     } catch (error) {
         console.error(`[Anilist] Error during fetch for "${search}":`, error);
         return null;
@@ -228,7 +239,15 @@ export const searchAnilist = async (search: string, page: number, perPage: numbe
 }
 
 // --- Search Anilist by Genre ---
+const GENRE_CACHE_EXPIRATION_SECONDS = 3600; // 1 hour
+
 export const getAnilistByGenre = async (genre: string, page: number, perPage: number) => {
+    const cacheKey = `genre:${genre}:${page}:${perPage}`;
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+        return typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData;
+    }
+
     console.log(`[Anilist] Searching for genre: "${genre}" with page: ${page} and perPage: ${perPage}`);
     const query = `
     query ($genre: String, $page: Int, $perPage: Int) {
@@ -274,7 +293,7 @@ export const getAnilistByGenre = async (genre: string, page: number, perPage: nu
         }
 
         const { data } = await response.json();
-        return {
+        const result = {
             pageInfo: data.Page.pageInfo,
             anime: data.Page.media.map((anime: any) => ({
                 id: anime.id,
@@ -283,6 +302,9 @@ export const getAnilistByGenre = async (genre: string, page: number, perPage: nu
                 rating: anime.averageScore,
             })),
         };
+
+        await redis.set(cacheKey, JSON.stringify(result), { ex: GENRE_CACHE_EXPIRATION_SECONDS });
+        return result;
     } catch (error) {
         console.error(`[Anilist] Error during fetch for genre "${genre}":`, error);
         return null;
