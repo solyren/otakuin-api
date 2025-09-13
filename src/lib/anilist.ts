@@ -166,3 +166,55 @@ export const getAnilistDataById = async (id: number) => {
         return null;
     }
 };
+
+// --- Search Anilist ---
+export const searchAnilist = async (search: string) => {
+    console.log(`[Anilist] Searching for: "${search}"`);
+    const query = `
+    query ($search: String) {
+        Page (page: 1, perPage: 20) {
+            media (search: $search, type: ANIME, sort: POPULARITY_DESC) {
+                id
+                title {
+                    romaji
+                    english
+                    native
+                }
+                coverImage {
+                    large
+                }
+                averageScore
+            }
+        }
+    }
+    `;
+
+    const variables = { search };
+
+    try {
+        const response = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ query, variables })
+        });
+
+        if (!response.ok) {
+            console.log(`[Anilist] API request failed for "${search}" with status: ${response.status}`);
+            return [];
+        }
+
+        const { data } = await response.json();
+        return data.Page.media.map((anime: any) => ({
+            id: anime.id,
+            title: anime.title,
+            coverImage: anime.coverImage.large,
+            rating: anime.averageScore,
+        }));
+    } catch (error) {
+        console.error(`[Anilist] Error during fetch for "${search}":`, error);
+        return [];
+    }
+}

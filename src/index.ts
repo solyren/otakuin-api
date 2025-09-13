@@ -5,6 +5,7 @@ import { Elysia } from 'elysia';
 import { home } from './routes/home';
 import { anime } from './routes/anime';
 import { stream } from './routes/stream';
+import { searchRoutes } from './routes/search';
 import { swagger } from '@elysiajs/swagger';
 
 export const app = new Elysia();
@@ -21,7 +22,7 @@ app.use(swagger({
 }));
 
 app.get('/', () => 'Hello from Otakuin API!');
-app.group('/api', (app) => app.use(home).use(anime).use(stream));
+app.group('/api', (app) => app.use(home).use(anime).use(stream).use(searchRoutes));
 
 
 
