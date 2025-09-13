@@ -17,7 +17,6 @@ export const getAnilistData = async (originalSearch: string) => {
     const uniqueSearchTerms = [...new Set(searchTerms)].filter(Boolean);
 
     for (const searchTerm of uniqueSearchTerms) {
-        // Add delay before every API call
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         console.log(`[Anilist] Searching for: "${searchTerm}"`);
@@ -54,7 +53,7 @@ export const getAnilistData = async (originalSearch: string) => {
 
             if (!response.ok) {
                 console.log(`[Anilist] API request failed for "${searchTerm}" with status: ${response.status}`);
-                continue; // Try the next search term
+                continue;
             }
 
             const { data } = await response.json();
@@ -103,7 +102,7 @@ export const getAnilistData = async (originalSearch: string) => {
 
 // --- Get Anilist Data By Id (with cache) ---
 const ANILIST_CACHE_KEY_PREFIX = 'anilist:';
-const ANILIST_CACHE_EXPIRATION_SECONDS = 86400; // 24 hours
+const ANILIST_CACHE_EXPIRATION_SECONDS = 86400;
 
 export const getAnilistDataById = async (id: number) => {
     const cacheKey = `${ANILIST_CACHE_KEY_PREFIX}${id}`;
@@ -112,7 +111,6 @@ export const getAnilistDataById = async (id: number) => {
         return typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData;
     }
 
-    // Add a delay before every API call to be safe
     await new Promise(resolve => setTimeout(resolve, 1000));
     console.log(`[Anilist] Getting data by ID: ${id}`);
 
@@ -216,5 +214,67 @@ export const searchAnilist = async (search: string) => {
     } catch (error) {
         console.error(`[Anilist] Error during fetch for "${search}":`, error);
         return [];
+    }
+}
+
+// --- Search Anilist by Genre ---
+export const getAnilistByGenre = async (genre: string, page: number, perPage: number) => {
+    console.log(`[Anilist] Searching for genre: "${genre}" with page: ${page} and perPage: ${perPage}`);
+    const query = `
+    query ($genre: String, $page: Int, $perPage: Int) {
+        Page (page: $page, perPage: $perPage) {
+            pageInfo {
+                total
+                currentPage
+                lastPage
+                hasNextPage
+                perPage
+            }
+            media (genre_in: [$genre], type: ANIME, sort: POPULARITY_DESC) {
+                id
+                title {
+                    romaji
+                    english
+                    native
+                }
+                coverImage {
+                    large
+                }
+                averageScore
+            }
+        }
+    }
+    `;
+
+    const variables = { genre, page, perPage };
+
+    try {
+        const response = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ query, variables })
+        });
+
+        if (!response.ok) {
+            console.log(`[Anilist] API request failed for genre "${genre}" with status: ${response.status}`);
+            return null;
+        }
+
+        const { data } = await response.json();
+        return {
+            pageInfo: data.Page.pageInfo,
+            anime: data.Page.media.map((anime: any) => ({
+                id: anime.id,
+                title: anime.title,
+                coverImage: anime.coverImage.large,
+                rating: anime.averageScore,
+            })),
+        };
+    } catch (error) {
+        console.error(`[Anilist] Error during fetch for genre "${genre}":`, error);
+        return null;
     }
 }

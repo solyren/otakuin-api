@@ -138,7 +138,6 @@ async function getAnimesailEmbeds(url: string): Promise<any[]> {
                     }
                 }
             } catch (e) {
-                // ignore
             }
         }
 

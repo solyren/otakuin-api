@@ -13,7 +13,7 @@ const findBestMatch = (animeDetails: any, slugList: { title: string; slug: strin
     const fuse = new Fuse(slugList, {
         keys: ['title'],
         includeScore: true,
-        threshold: 0.4, // Bisa di ganti
+        threshold: 0.4,
     });
 
     const titlesToSearch = [
