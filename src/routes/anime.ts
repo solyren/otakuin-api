@@ -274,7 +274,7 @@ export const anime = new Elysia({ prefix: '/anime' })
             coverImage: animeDetails.coverImage.large,
             bannerImage: animeDetails.bannerImage,
             genres: animeDetails.genres,
-            averageScore: animeDetails.averageScore,
+            rating: animeDetails.averageScore,
             studios: animeDetails.studios && animeDetails.studios.nodes ? animeDetails.studios.nodes.map((studio: any) => studio.name) : [],
             episodes: episodeList
         };

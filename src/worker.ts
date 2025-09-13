@@ -45,7 +45,8 @@ const processJob = async (jobData: any) => {
             finalAnimeData = {
                 id: anilistData.id,
                 title: anilistData.title.romaji || anilistData.title.english || jobData.normalizedSlug,
-                thumbnail: anilistData.coverImage.large || anilistData.coverImage.medium
+                thumbnail: anilistData.coverImage.large || anilistData.coverImage.medium,
+                rating: anilistData.averageScore
             };
         } else {
             // If enrichment fails, keep the original raw data
@@ -53,7 +54,8 @@ const processJob = async (jobData: any) => {
             finalAnimeData = {
                 id: null,
                 title: jobData.title,
-                thumbnail: jobData.thumbnail
+                thumbnail: jobData.thumbnail,
+                rating: null
             };
         }
 

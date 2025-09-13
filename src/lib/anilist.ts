@@ -34,6 +34,7 @@ export const getAnilistData = async (originalSearch: string) => {
                         large
                         medium
                     }
+                    averageScore
                 }
             }
         }
