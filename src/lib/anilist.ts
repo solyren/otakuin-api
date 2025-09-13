@@ -166,11 +166,18 @@ export const getAnilistDataById = async (id: number) => {
 };
 
 // --- Search Anilist ---
-export const searchAnilist = async (search: string) => {
-    console.log(`[Anilist] Searching for: "${search}"`);
+export const searchAnilist = async (search: string, page: number, perPage: number) => {
+    console.log(`[Anilist] Searching for: "${search}" with page: ${page} and perPage: ${perPage}`);
     const query = `
-    query ($search: String) {
-        Page (page: 1, perPage: 20) {
+    query ($search: String, $page: Int, $perPage: Int) {
+        Page (page: $page, perPage: $perPage) {
+            pageInfo {
+                total
+                currentPage
+                lastPage
+                hasNextPage
+                perPage
+            }
             media (search: $search, type: ANIME, sort: POPULARITY_DESC) {
                 id
                 title {
@@ -187,7 +194,7 @@ export const searchAnilist = async (search: string) => {
     }
     `;
 
-    const variables = { search };
+    const variables = { search, page, perPage };
 
     try {
         const response = await fetch('https://graphql.anilist.co', {
@@ -201,19 +208,22 @@ export const searchAnilist = async (search: string) => {
 
         if (!response.ok) {
             console.log(`[Anilist] API request failed for "${search}" with status: ${response.status}`);
-            return [];
+            return null;
         }
 
         const { data } = await response.json();
-        return data.Page.media.map((anime: any) => ({
-            id: anime.id,
-            title: anime.title,
-            coverImage: anime.coverImage.large,
-            rating: anime.averageScore,
-        }));
+        return {
+            pageInfo: data.Page.pageInfo,
+            anime: data.Page.media.map((anime: any) => ({
+                id: anime.id,
+                title: anime.title,
+                coverImage: anime.coverImage.large,
+                rating: anime.averageScore,
+            })),
+        };
     } catch (error) {
         console.error(`[Anilist] Error during fetch for "${search}":`, error);
-        return [];
+        return null;
     }
 }
 

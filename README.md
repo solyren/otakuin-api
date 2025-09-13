@@ -111,10 +111,37 @@ Di sana kamu bisa lihat semua endpoint yang tersedia, parameter yang dibutuhkan,
 | `GET`  | `/api/anime/{id}`                   | Mengambil detail sebuah anime.                 |
 | `GET`  | `/api/anime/{id}/episode/{episode}` | Mendapatkan sumber stream untuk sebuah episode. |
 | `GET`  | `/api/anime/stream/{stream_id}`     | Mem-proxy dan menayangkan video stream.        |
-| `GET`  | `/api/search?q={keyword}`           | Mencari anime berdasarkan kata kunci.          |
+| `GET`  | `/api/search`           | Mencari anime berdasarkan kata kunci dengan paginasi. Mendukung query `q`, `page`, dan `perPage`.          |
 | `GET`  | `/api/genre/{genre}`                | Mencari anime berdasarkan genre dengan paginasi. Mendukung query `page` dan `perPage`. |
 
 ### Contoh Implementasi
+
+#### Pencarian Anime Berdasarkan Kata Kunci
+
+Fitur ini memungkinkan pengguna untuk mencari anime berdasarkan kata kunci dengan dukungan paginasi.
+
+**Endpoint:**
+`GET /api/search`
+
+**Parameter Query:**
+-   `q` (wajib): Kata kunci pencarian.
+-   `page` (opsional): Nomor halaman yang ingin ditampilkan (default: `1`).
+-   `perPage` (opsional): Jumlah item per halaman (default: `20`).
+
+**Contoh Penggunaan:**
+
+1.  **Mencari "naruto" halaman pertama (20 item):**
+    ```
+    GET /api/search?q=naruto
+    ```
+
+2.  **Mencari "one piece" halaman kedua dengan 5 item per halaman:**
+    ```
+    GET /api/search?q=one%20piece&page=2&perPage=5
+    ```
+
+**Contoh Respons Sukses:**
+Sama seperti pencarian berdasarkan genre, respons akan berisi `pageInfo` dan `anime`.
 
 #### Pencarian Anime Berdasarkan Genre
 
