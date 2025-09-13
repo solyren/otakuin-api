@@ -17,7 +17,7 @@ export const getAnilistData = async (originalSearch: string) => {
     const uniqueSearchTerms = [...new Set(searchTerms)].filter(Boolean);
 
     for (const searchTerm of uniqueSearchTerms) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         console.log(`[Anilist] Searching for: "${searchTerm}"`);
         const query = `
@@ -112,7 +112,7 @@ export const getAnilistDataById = async (id: number) => {
         return typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData;
     }
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
     console.log(`[Anilist] Getting data by ID: ${id}`);
 
     const query = `
