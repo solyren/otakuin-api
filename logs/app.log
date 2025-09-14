@@ -250,3 +250,11 @@
 [2025-09-14T12:41:34.949Z] [Animesail] Starting scraping from https://154.26.137.28/anime/
 [2025-09-14T12:41:36.724Z] [Animesail] Cleared old data from slugs:animesail
 [2025-09-14T12:41:43.076Z] [Animesail] Found 4803 anime links.
+[2025-09-14T12:54:09.447Z] Starting all scrapers...
+[2025-09-14T12:54:09.455Z] Starting Animesail scraper...
+[2025-09-14T12:54:09.457Z] [Animesail] Starting scraping from https://154.26.137.28/anime/
+[2025-09-14T12:54:09.459Z] [Animesail] No proxy configured. Scraping may fail due to geo-blocking.
+[2025-09-14T12:54:10.595Z] [Animesail] Cleared old data from slugs:animesail
+[2025-09-14T12:54:13.187Z] [Animesail] Found 4803 anime links.
+[2025-09-14T12:54:14.954Z] [Animesail] Successfully stored 4803 slugs in Redis.
+[2025-09-14T12:54:14.960Z] Animesail scraper finished.
