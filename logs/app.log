@@ -479,3 +479,10 @@
 [2025-09-14T14:21:43.141Z] [Request] GET http://127.0.0.1:3000/api/anime/19
 [2025-09-14T14:26:24.590Z] [Request] GET http://127.0.0.1:3000/api/anime/19
 [2025-09-14T14:26:39.931Z] [Request] GET http://127.0.0.1:3000/api/anime/19/episode/1
+[2025-09-14T14:31:52.392Z] Starting all scrapers...
+[2025-09-14T14:31:52.394Z] Starting Animesail scraper...
+[2025-09-14T14:31:52.395Z] [Animesail] Starting scraping from https://154.26.137.28/anime/
+[2025-09-14T14:31:53.469Z] [Animesail] Cleared old data from slugs:animesail
+[2025-09-14T14:31:55.673Z] [Animesail] Found 4803 anime links on attempt 1.
+[2025-09-14T14:31:56.840Z] [Animesail] Successfully stored 4803 slugs in Redis.
+[2025-09-14T14:31:56.841Z] Animesail scraper finished.
