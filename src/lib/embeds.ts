@@ -3,6 +3,7 @@ import { redis } from './redis';
 import { Agent } from 'https';
 import { setGlobalDispatcher } from 'undici';
 import axios from 'axios';
+import https from 'https';
 
 const agent = new Agent({
     connect: {
@@ -24,13 +25,18 @@ const animesailFetchOptions = {
 // --- Resolve Player ---
 async function resolvePlayer(url: string, playerName: string): Promise<string | null> {
     try {
-        const headers = {
-            'User-Agent': FAKE_USER_AGENT,
-            'Referer': process.env.ANIMESAIL_BASE_URL,
-            'Cookie': '_as_ipin_tz=UTC; _as_ipin_lc=en-US; _as_ipin_ct=ID'
-        };
-
-        const { data: html } = await axios.get(url, { headers });
+        const { data: html } = await axios.get(url, {
+            headers: {
+                'User-Agent': FAKE_USER_AGENT,
+                'Referer': process.env.ANIMESAIL_BASE_URL,
+                'Cookie': '_as_ipin_tz=UTC; _as_ipin_lc=en-US; _as_ipin_ct=ID',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                'Accept-Language': 'en-US,en;q=0.9'
+            },
+            httpsAgent: new https.Agent({
+                rejectUnauthorized: false
+            })
+        });
         const $ = cheerio.load(html);
         const videoSource = $('video source').first().attr('src');
 

@@ -258,3 +258,8 @@
 [2025-09-14T12:54:13.187Z] [Animesail] Found 4803 anime links.
 [2025-09-14T12:54:14.954Z] [Animesail] Successfully stored 4803 slugs in Redis.
 [2025-09-14T12:54:14.960Z] Animesail scraper finished.
+[2025-09-14T13:37:28.920Z] Starting all scrapers...
+[2025-09-14T13:37:28.921Z] Starting Animesail scraper...
+[2025-09-14T13:37:28.921Z] [Animesail] Starting scraping from https://154.26.137.28/anime/
+[2025-09-14T13:37:30.207Z] [Animesail] Cleared old data from slugs:animesail
+[2025-09-14T13:37:42.196Z] [Animesail] Found 4803 anime links.

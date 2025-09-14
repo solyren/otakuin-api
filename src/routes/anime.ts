@@ -5,6 +5,8 @@ import { getSamehadakuEmbeds, getAnimesailEmbeds } from '../lib/embeds';
 import { randomBytes } from 'crypto';
 import * as cheerio from 'cheerio';
 import { getAnilistDataById, normalizeSlug } from '../lib/anilist';
+import axios from 'axios';
+import https from 'https';
 
 // --- Find Best Match ---
 const findBestMatch = (animeDetails: any, slugList: { title: string; slug: string }[]) => {
@@ -144,33 +146,43 @@ const getAnimesailEpisodeList = async (id: number, animeDetails: any) => {
 
     const animesailUrl = animesailSlug.startsWith('http') ? animesailSlug : `${process.env.ANIMESAIL_BASE_URL}${animesailSlug}`;
 
-    const response = await fetch(animesailUrl, {
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
-            'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=ID'
-        }
-    });
+    try {
+        const response = await axios.get(animesailUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+                'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=ID',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                'Accept-Language': 'en-US,en;q=0.9'
+            },
+            httpsAgent: new https.Agent({
+                rejectUnauthorized: false
+            })
+        });
 
-    if (!response.ok) {
+        if (response.status !== 200) {
+            return [];
+        }
+
+        const html = response.data;
+        const $ = cheerio.load(html);
+
+        const episodeList: { episode: number; title: string; url: string }[] = [];
+        $('ul.daftar li a').each((i, el) => {
+            const title = $(el).text().trim();
+            const url = $(el).attr('href') || '';
+            const episodeMatch = title.match(/Episode\s+(\d+)/i);
+            const episode = episodeMatch ? parseInt(episodeMatch[1]) : 0;
+
+            if (episode > 0) {
+                episodeList.push({ episode, title, url });
+            }
+        });
+
+        return episodeList.sort((a, b) => b.episode - a.episode);
+    } catch (error) {
+        console.error('Error fetching Animesail episode list:', error);
         return [];
     }
-
-    const html = await response.text();
-    const $ = cheerio.load(html);
-
-    const episodeList: { episode: number; title: string; url: string }[] = [];
-    $('ul.daftar li a').each((i, el) => {
-        const title = $(el).text().trim();
-        const url = $(el).attr('href') || '';
-        const episodeMatch = title.match(/Episode\s+(\d+)/i);
-        const episode = episodeMatch ? parseInt(episodeMatch[1]) : 0;
-
-        if (episode > 0) {
-            episodeList.push({ episode, title, url });
-        }
-    });
-
-    return episodeList.sort((a, b) => b.episode - a.episode);
 }
 
 // --- Format Episode Slug ---
