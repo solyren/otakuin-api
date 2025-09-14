@@ -119,7 +119,7 @@ const getSamehadakuEpisodeList = async (id: number, animeDetails: any) => {
         }
     });
 
-    return episodeList.sort((a, b) => a.episode - b.episode);
+    return episodeList.sort((a, b) => b.episode - a.episode);
 }
 
 // --- Get Animesail Episode List ---
@@ -170,7 +170,7 @@ const getAnimesailEpisodeList = async (id: number, animeDetails: any) => {
         }
     });
 
-    return episodeList.sort((a, b) => a.episode - b.episode);
+    return episodeList.sort((a, b) => b.episode - a.episode);
 }
 
 // --- Format Episode Slug ---
