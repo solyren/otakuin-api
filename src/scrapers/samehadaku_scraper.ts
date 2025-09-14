@@ -7,12 +7,10 @@ const SOURCE_KEY = 'slugs:samehadaku';
 // --- Scrape Page ---
 async function scrapePage(page: number): Promise<boolean> {
     const url = page === 1 ? BASE_URL : `${BASE_URL}page/${page}/`;
-    console.log(`Scraping page: ${url}`);
 
     try {
         const response = await fetch(url);
         if (!response.ok) {
-            console.log(`Failed to fetch page ${page}. Status: ${response.status}`);
             return false;
         }
 
@@ -22,7 +20,6 @@ async function scrapePage(page: number): Promise<boolean> {
         const animeLinks = $('div.relat article.animpost div.animposx a');
 
         if (animeLinks.length === 0) {
-            console.log(`No anime found on page ${page}. Assuming end of list.`);
             return false;
         }
 
@@ -38,18 +35,15 @@ async function scrapePage(page: number): Promise<boolean> {
         });
 
         await pipeline.exec();
-        console.log(`Successfully processed ${animeLinks.length} anime from page ${page}.`);
         return true;
 
     } catch (error) {
-        console.error(`An error occurred while scraping page ${page}:`, error);
         return false;
     }
 }
 
-// --- Start Scraping ---
+// --- Start Samehadaku Scraping ---
 export async function startSamehadakuScraping() {
-    console.log('Starting slug scraping process for Samehadaku...');
     let page = 1;
     let hasMorePages = true;
 
@@ -61,7 +55,5 @@ export async function startSamehadakuScraping() {
         }
     }
 
-    console.log('Scraping finished.');
     const total = await redis.hlen(SOURCE_KEY);
-    console.log(`Total slugs stored for Samehadaku: ${total}`);
 }

@@ -1,6 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { getAnilistByGenre } from '../lib/anilist';
 
+// --- Genre Routes ---
 export const genreRoutes = new Elysia()
     .get('/genre/:genre', async ({ params, query }) => {
         const { genre } = params;

@@ -1,6 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { searchAnilist } from '../lib/anilist';
 
+// --- Search Routes ---
 export const searchRoutes = new Elysia()
     .get('/search', async ({ query }) => {
         const { q, page = 1, perPage = 20 } = query;

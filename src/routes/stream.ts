@@ -7,7 +7,7 @@ import { wrapper as axiosCookieJarSupport } from 'axios-cookiejar-support';
 
 const STREAM_KEY_PREFIX = 'stream:';
 const STREAM_DATA_CACHE_PREFIX = 'cache:stream_data:';
-const STREAM_DATA_EXPIRATION_SECONDS = 3600; // 1 hour
+const STREAM_DATA_EXPIRATION_SECONDS = 3600;
 const FAKE_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36';
 
 const commonFetchOptions = {
@@ -315,6 +315,7 @@ const getKrakenfilesStream = async (url: string) => {
     throw new Error('No stream URL found on Krakenfiles page');
 };
 
+// --- Stream Route ---
 export const stream = new Elysia()
     .get('/anime/stream/:id', async ({ params, set, request, ip }) => {
         const { id } = params;
@@ -324,6 +325,7 @@ export const stream = new Elysia()
             return { error: 'Missing stream ID' };
         }
 
+        // --- Generic Proxy Handler ---
         const genericProxyHandler = async (url: string, referer?: string) => {
             const fetchHeaders: Record<string, string> = {
                 'User-Agent': FAKE_USER_AGENT,
@@ -397,8 +399,6 @@ export const stream = new Elysia()
                     }
                     const videoResponse = await fetch(videoUrl, { headers: fetchHeaders });
                     if (!videoResponse.ok) {
-                        const errorBody = await videoResponse.text();
-                        console.error(`Google Video Fetch Error: Status ${videoResponse.status}, Body: ${errorBody}`);
                         throw new Error(`Failed to fetch video from Google. Status: ${videoResponse.status}`)
                     }
                     return videoResponse;
@@ -440,7 +440,6 @@ export const stream = new Elysia()
             }
 
         } catch (error: any) {
-            console.error(`Error proxying stream for ID ${id}:`, error);
             set.status = 500;
             return { error: error.message || 'Internal server error' };
         }

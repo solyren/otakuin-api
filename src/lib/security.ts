@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia';
 
+// --- Security ---
 export const security = new Elysia()
     .onRequest(({ request, set }) => {
         if (process.env.API_AUTH_ENABLED !== 'true') {

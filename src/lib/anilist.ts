@@ -167,7 +167,7 @@ export const getAnilistDataById = async (id: number) => {
 };
 
 // --- Search Anilist ---
-const SEARCH_CACHE_EXPIRATION_SECONDS = 3600; // 1 hour
+const SEARCH_CACHE_EXPIRATION_SECONDS = 3600;
 
 export const searchAnilist = async (search: string, page: number, perPage: number) => {
     const cacheKey = `search:${search}:${page}:${perPage}`;
@@ -240,7 +240,7 @@ export const searchAnilist = async (search: string, page: number, perPage: numbe
 }
 
 // --- Search Anilist by Genre ---
-const GENRE_CACHE_EXPIRATION_SECONDS = 3600; // 1 hour
+const GENRE_CACHE_EXPIRATION_SECONDS = 3600;
 
 export const getAnilistByGenre = async (genre: string, page: number, perPage: number) => {
     const cacheKey = `genre:${genre}:${page}:${perPage}`;

@@ -21,18 +21,15 @@ const agent = new Agent({
 });
 setGlobalDispatcher(agent);
 
-// --- Start Scraping ---
+// --- Start Animesail Scraping ---
 export async function startAnimesailScraping() {
     const url = BASE_URL;
-    console.log(`Scraping page: ${url}`);
 
     try {
         await redis.del(SOURCE_KEY);
-        console.log('Cleared old slugs from Redis.');
 
         const response = await fetch(url, fetchOptions);
         if (!response.ok) {
-            console.log(`Failed to fetch page. Status: ${response.status}`);
             return;
         }
 
@@ -42,7 +39,6 @@ export async function startAnimesailScraping() {
         const animeLinks = $('div.soralist a.series');
 
         if (animeLinks.length === 0) {
-            console.log(`No anime found on the page.`);
             return;
         }
 
@@ -58,12 +54,7 @@ export async function startAnimesailScraping() {
         });
 
         await pipeline.exec();
-        console.log(`Successfully processed ${animeLinks.length} anime.`);
-
-        const total = await redis.hlen(SOURCE_KEY);
-        console.log(`Total slugs stored for AnimeSail: ${total}`);
 
     } catch (error) {
-        console.error(`An error occurred while scraping:`, error);
     }
 }

@@ -5,6 +5,7 @@ import path from 'path';
 const getManualMapKey = (source: string) => `manual_map:${source}:anilist_id_to_slug`;
 const getMapFilePath = (source: string) => path.join(__dirname, 'data', `manual_map_${source}.json`);
 
+// --- Read Map File ---
 const readMapFile = async (source: string): Promise<Record<string, string>> => {
     const filePath = getMapFilePath(source);
     try {
@@ -16,11 +17,13 @@ const readMapFile = async (source: string): Promise<Record<string, string>> => {
     }
 };
 
+// --- Write Map File ---
 const writeMapFile = async (source: string, data: Record<string, string>) => {
     const filePath = getMapFilePath(source);
     await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
 };
 
+// --- Map ID to Slug ---
 const mapIdToSlug = async () => {
     const source = process.argv[2];
     const anilistId = process.argv[3];

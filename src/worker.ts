@@ -6,7 +6,7 @@ const ENRICHMENT_QUEUE_KEY = 'queue:enrichment';
 const HOME_CACHE_KEY = 'home:anime_list';
 const MANUAL_MAP_KEY = 'manual_map:samehadaku:anilist_id_to_slug';
 
-// Function to get the slug part from a full Samehadaku URL
+// --- Get Slug From URL ---
 const getSlugFromUrl = (url: string) => {
     try {
         const path = new URL(url).pathname;
@@ -16,13 +16,13 @@ const getSlugFromUrl = (url: string) => {
     }
 }
 
+// --- Process Job ---
 const processJob = async (jobData: any) => {
     try {
         console.log(`[Worker] Processing job for: "${jobData.title}"`);
 
         let anilistData;
 
-        // Step 1: Check for a manual mapping first
         const manualMap = await redis.hgetall(MANUAL_MAP_KEY);
         if (manualMap) {
             const invertedMap = Object.fromEntries(Object.entries(manualMap).map(([id, slug]) => [slug, id]));
@@ -35,7 +35,6 @@ const processJob = async (jobData: any) => {
             }
         }
 
-        // Step 2: If no manual map found, use fuzzy search
         if (!anilistData) {
             anilistData = await getAnilistData(jobData.normalizedSlug);
         }
@@ -46,35 +45,38 @@ const processJob = async (jobData: any) => {
                 id: anilistData.id,
                 title: anilistData.title.romaji || anilistData.title.english || jobData.normalizedSlug,
                 thumbnail: anilistData.coverImage.large || anilistData.coverImage.medium,
-                rating: anilistData.averageScore,
-                last_episode: jobData.last_episode
+                rating: anilistData.averageScore
             };
         } else {
-            // If enrichment fails, keep the original raw data
             console.log(`-> [Worker] Anilist match failed for "${jobData.title}". Keeping raw data.`);
             finalAnimeData = {
                 id: null,
                 title: jobData.title,
                 thumbnail: jobData.thumbnail,
-                rating: null,
-                last_episode: jobData.last_episode
+                rating: null
             };
         }
 
-        // Update the item in the main home cache without changing order
-        const cachedData = await redis.get(HOME_CACHE_KEY);
-        let homeList = cachedData ? (typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData) : [];
+        if (jobData.source === 'home') {
+            finalAnimeData.last_episode = jobData.last_episode;
+        } else if (jobData.source === 'top10') {
+            finalAnimeData.rank = jobData.rank;
+        }
 
-        const itemIndex = homeList.findIndex((item: any) => item.rawSlug === jobData.rawSlug);
+        const cacheKey = jobData.source === 'top10' ? 'top10:anime_list' : HOME_CACHE_KEY;
+
+        const cachedData = await redis.get(cacheKey);
+        let list = cachedData ? (typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData) : [];
+
+        const itemIndex = list.findIndex((item: any) => item.rawSlug === jobData.rawSlug);
 
         if (itemIndex !== -1) {
-            console.log(`[Worker] Updating item "${finalAnimeData.title}" at index ${itemIndex}`);
-            // Preserve rawSlug and normalizedSlug in the final object for future lookups
-            homeList[itemIndex] = { ...finalAnimeData, rawSlug: jobData.rawSlug, normalizedSlug: jobData.normalizedSlug };
-            await redis.set(HOME_CACHE_KEY, JSON.stringify(homeList));
-            console.log(`[Worker] Finished job for "${finalAnimeData.title}". Home cache updated.`);
+            console.log(`[Worker] Updating item "${finalAnimeData.title}" in ${jobData.source} list at index ${itemIndex}`);
+            list[itemIndex] = { ...finalAnimeData, rawSlug: jobData.rawSlug, normalizedSlug: jobData.normalizedSlug };
+            await redis.set(cacheKey, JSON.stringify(list));
+            console.log(`[Worker] Finished job for "${finalAnimeData.title}". ${jobData.source} cache updated.`);
         } else {
-            console.log(`[Worker] Could not find item with rawSlug "${jobData.rawSlug}" in home cache. It might be from an old scrape.`);
+            console.log(`[Worker] Could not find item with rawSlug "${jobData.rawSlug}" in ${jobData.source} cache. It might be from an old scrape.`);
         }
 
     } catch (error) {
@@ -82,6 +84,7 @@ const processJob = async (jobData: any) => {
     }
 };
 
+// --- Main ---
 const main = async () => {
     console.log('[Worker] Starting enrichment worker...');
     while (true) {

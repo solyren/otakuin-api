@@ -6,6 +6,7 @@ import { normalizeSlug } from '../lib/anilist';
 const ENRICHMENT_QUEUE_KEY = 'queue:enrichment';
 const HOME_CACHE_KEY = 'home:anime_list';
 
+// --- Scrape Page ---
 const scrapePage = async (page: number) => {
     const url = page === 1
         ? `${process.env.SAMEHADAKU_BASE_URL}/anime-terbaru/`
@@ -41,8 +42,8 @@ const scrapePage = async (page: number) => {
         if (rawSlug && titleFromPage) {
             const normalizedSlug = normalizeSlug(rawSlug);
             animeList.push({
-                id: null, // Start with null ID
-                rawSlug, // Keep raw slug for matching in worker
+                id: null,
+                rawSlug,
                 title: titleFromPage,
                 thumbnail,
                 normalizedSlug,
@@ -54,16 +55,15 @@ const scrapePage = async (page: number) => {
     return animeList;
 }
 
+// --- Update Home ---
 export const updateHome = async () => {
     console.log('[Scraper] Starting smart update cron job...');
 
-    // 1. Ambil daftar anime yang sudah ada di cache
     const existingCache = await redis.get(HOME_CACHE_KEY);
     const existingList = existingCache ? (typeof existingCache === 'string' ? JSON.parse(existingCache) : existingCache) : [];
     const existingMap = new Map(existingList.map((item: any) => [item.rawSlug, item]));
     console.log(`[Scraper] Found ${existingList.length} items in existing cache.`);
 
-    // 2. Scrape halaman untuk mendapatkan daftar anime terbaru
     let scrapedList: any[] = [];
     for (let i = 1; i <= 2; i++) {
         const pageAnimeList = await scrapePage(i);
@@ -77,18 +77,14 @@ export const updateHome = async () => {
     }, []);
     console.log(`[Scraper] Scraped ${uniqueScrapedList.length} unique items from the source.`);
 
-    // 3. Gabungkan daftar baru dan lama secara cerdas
     const newList: any[] = [];
     const newJobs: any[] = [];
 
     uniqueScrapedList.forEach(scrapedItem => {
         const existingItem = existingMap.get(scrapedItem.rawSlug);
         if (existingItem) {
-            // Jika item sudah ada, gunakan data lama yang sudah diperkaya
-            // tapi pastikan data non-Anilist (seperti last_episode) diperbarui
             newList.push({ ...existingItem, last_episode: scrapedItem.last_episode });
         } else {
-            // Jika item benar-benar baru, tambahkan ke daftar dan antrian kerja
             newList.push(scrapedItem);
             newJobs.push(scrapedItem);
         }
@@ -96,15 +92,13 @@ export const updateHome = async () => {
 
     console.log(`[Scraper] Merged list contains ${newList.length} items. Found ${newJobs.length} new items to enrich.`);
 
-    // 4. Perbarui cache utama dengan daftar yang sudah digabungkan
     await redis.set(HOME_CACHE_KEY, JSON.stringify(newList));
     console.log(`[Scraper] Home cache updated with smart-merged list.`);
 
-    // 5. Dorong hanya pekerjaan baru ke antrian
     if (newJobs.length > 0) {
         const pipeline = redis.pipeline();
         for (const anime of newJobs) {
-            pipeline.rpush(ENRICHMENT_QUEUE_KEY, JSON.stringify(anime));
+            pipeline.rpush(ENRICHMENT_QUEUE_KEY, JSON.stringify({ ...anime, source: 'home' }));
         }
         await pipeline.exec();
         console.log(`[Scraper] Added ${newJobs.length} new jobs to the enrichment queue.`);
