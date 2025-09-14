@@ -23,11 +23,15 @@ import { genreRoutes } from './routes/genre';
 import { top10 } from './routes/top10';
 import { swagger } from '@elysiajs/swagger';
 
+import { requestLogger } from './lib/request_logger';
+
 // --- App ---
 export const app = new Elysia().onError(({ code, error, set }) => {
     errorLogger(error);
     return new Response(error.toString())
 });
+
+app.use(requestLogger);
 
 app.use(swagger({
     path: '/docs',
