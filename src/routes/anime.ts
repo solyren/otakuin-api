@@ -4,14 +4,20 @@ import Fuse from 'fuse.js';
 import { getSamehadakuEmbeds, getAnimesailEmbeds } from '../lib/embeds';
 import { randomBytes } from 'crypto';
 import * as cheerio from 'cheerio';
-import { getAnilistDataById } from '../lib/anilist';
+import { getAnilistDataById, normalizeSlug } from '../lib/anilist';
 
 // --- Find Best Match ---
 const findBestMatch = (animeDetails: any, slugList: { title: string; slug: string }[]) => {
     if (!slugList || slugList.length === 0) return null;
 
-    const fuse = new Fuse(slugList, {
-        keys: ['title'],
+    const normalizedSlugList = slugList.map(item => ({
+        ...item,
+        normalizedTitle: normalizeSlug(item.slug)
+    }));
+
+
+    const fuse = new Fuse(normalizedSlugList, {
+        keys: ['normalizedTitle'],
         includeScore: true,
         threshold: 0.4,
     });
