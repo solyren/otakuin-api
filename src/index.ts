@@ -22,8 +22,10 @@ app.use(swagger({
     }
 }));
 
+import { security } from './lib/security';
+
 app.get('/', () => 'Hello from Otakuin API!');
-app.group('/api', (app) => app.use(home).use(anime).use(stream).use(searchRoutes).use(genreRoutes));
+app.group('/api', (app) => app.use(security).use(home).use(anime).use(stream).use(searchRoutes).use(genreRoutes));
 
 
 
