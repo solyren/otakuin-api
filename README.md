@@ -12,6 +12,7 @@ API tidak resmi yang simpel tapi powerful untuk streaming anime, mengambil data 
 - ✅ **Daftar Anime Konsisten & Real-time:** Menggunakan sistem scraper-worker dengan mekanisme *smart update*. Daftar anime terbaru diambil secara berkala tanpa menimpa data yang sudah ada, memastikan ID anime tidak pernah kembali ke `null` saat proses refresh.
 - ✅ **Info Episode Terbaru:** Endpoint `/api/home` kini menyertakan `last_episode` untuk menunjukkan episode terakhir yang rilis.
 - ✅ **Urutan Episode Descending:** Daftar episode di detail anime kini diurutkan dari yang terbaru ke yang terlama.
+- ✅ **Top 10 Anime Mingguan:** Menyediakan daftar 10 anime terpopuler yang diperbarui secara otomatis setiap minggu.
 - ✅ **Pencocokan Judul Cerdas:** Algoritma pencarian pintar untuk mencocokkan judul dari sumber scrape dengan data di Anilist, bahkan jika namanya sedikit berbeda (misal: "Season 2" vs "2nd Season").
 - ✅ **Pemetaan Manual Terintegrasi:** Kesalahan pencocokan dapat diperbaiki secara permanen menggunakan fitur pemetaan manual.
 - ✅ **Detail Anime Lengkap:** Info detail dari Anilist (sinopsis, genre, gambar, dll).
@@ -116,6 +117,7 @@ Dokumentasi API lengkap dan interaktif tersedia melalui Swagger UI. Setelah serv
 | `GET`  | `/api/anime/stream/{stream_id}`     | Mem-proxy dan menayangkan video stream.        | 
 | `GET`  | `/api/search`                       | Mencari anime berdasarkan kata kunci dengan paginasi. Mendukung query `q`, `page`, dan `perPage`.          |
 | `GET`  | `/api/genre/{genre}`                | Mencari anime berdasarkan genre dengan paginasi. Mendukung query `page` dan `perPage`. |
+| `GET`  | `/api/top10`                        | Mengambil daftar 10 anime teratas minggu ini.  |
 
 
 ### Contoh Implementasi
@@ -146,6 +148,36 @@ Respons akan berisi daftar anime yang sudah diperkaya dengan data dari Anilist.
     "thumbnail": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx153518-7FNR9GfFFh43.jpg",
     "rating": 88,
     "last_episode": 12
+  }
+]
+```
+
+#### Mengambil Daftar Top 10 Anime
+
+**Endpoint:**
+`GET /api/top10`
+
+**Header (jika auth aktif):**
+`x-api-key: your-secret-api-key`
+
+**Contoh Respons Sukses:**
+Respons akan berisi daftar 10 anime teratas yang sudah diperkaya dengan data dari Anilist.
+
+```json
+[
+  {
+    "id": 21,
+    "title": "One Piece",
+    "thumbnail": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-tQc9Q8tLgQzQ.png",
+    "rating": 87,
+    "rank": 1
+  },
+  {
+    "id": 184237,
+    "title": "Sakamoto Days Cour 2",
+    "thumbnail": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx184237-OJAksU2fsIPx.jpg",
+    "rating": 78,
+    "rank": 2
   }
 ]
 ```
