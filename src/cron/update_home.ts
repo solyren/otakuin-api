@@ -27,6 +27,17 @@ const scrapePage = async (page: number) => {
         const titleFromPage = $(element).find('h2.entry-title').text().trim();
         const thumbnail = $(element).find('img').attr('src');
 
+        // --- Mencari Episode Terakhir (Logika Baru) ---
+        let last_episode: number | null = null;
+        const episodeText = $(element).find('div.dtla span').first().text().trim();
+        if (episodeText) {
+            const match = episodeText.match(/Episode\s*(\d+)/i);
+            if (match) {
+                last_episode = parseInt(match[1], 10);
+            }
+        }
+        // ---------------------------------------------
+
         if (rawSlug && titleFromPage) {
             const normalizedSlug = normalizeSlug(rawSlug);
             animeList.push({
@@ -34,7 +45,8 @@ const scrapePage = async (page: number) => {
                 rawSlug, // Keep raw slug for matching in worker
                 title: titleFromPage,
                 thumbnail,
-                normalizedSlug
+                normalizedSlug,
+                last_episode
             });
         }
     });
