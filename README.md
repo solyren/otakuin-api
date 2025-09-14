@@ -8,13 +8,14 @@ API tidak resmi yang simpel tapi powerful untuk streaming anime, mengambil data 
 
 ### ✨ Fitur Utama
 
-- ✅ **Daftar Anime Terbaru:** Menggunakan sistem scraper-worker, daftar anime terbaru diambil secara berkala di latar belakang, memastikan data selalu fresh tanpa membebani API saat diminta.
-- ✅ **Pencarian Berdasarkan Genre:** Cari anime berdasarkan genre dengan dukungan paginasi.
+- ✅ **Keamanan API Key:** Semua endpoint di bawah `/api` kini dilindungi oleh API Key. Fitur ini bisa diaktifkan atau dinonaktifkan melalui variabel environment untuk fleksibilitas.
+- ✅ **Daftar Anime Konsisten & Real-time:** Menggunakan sistem scraper-worker dengan mekanisme *smart update*. Daftar anime terbaru diambil secara berkala tanpa menimpa data yang sudah ada, memastikan ID anime tidak pernah kembali ke `null` saat proses refresh.
+- ✅ **Info Episode Terbaru:** Endpoint `/api/home` kini menyertakan `last_episode` untuk menunjukkan episode terakhir yang rilis.
+- ✅ **Urutan Episode Descending:** Daftar episode di detail anime kini diurutkan dari yang terbaru ke yang terlama.
 - ✅ **Pencocokan Judul Cerdas:** Algoritma pencarian pintar untuk mencocokkan judul dari sumber scrape dengan data di Anilist, bahkan jika namanya sedikit berbeda (misal: "Season 2" vs "2nd Season").
-- ✅ **Pemetaan Manual Terintegrasi:** Kesalahan pencocokan dapat diperbaiki secara permanen menggunakan fitur pemetaan manual yang kini terintegrasi penuh dengan sistem pengambilan data halaman utama.
+- ✅ **Pemetaan Manual Terintegrasi:** Kesalahan pencocokan dapat diperbaiki secara permanen menggunakan fitur pemetaan manual.
 - ✅ **Detail Anime Lengkap:** Info detail dari Anilist (sinopsis, genre, gambar, dll).
 - ✅ **Multi-sumber Stream:** Gak cuma satu, tapi cari link dari beberapa source (Samehadaku, Animesail).
-- ✅ **Prioritas Sumber:** Mengambil daftar episode dari Samehadaku terlebih dahulu, dengan Animesail sebagai fallback.
 - ✅ **Proxy Stream:** Nonton langsung lewat API tanpa ribet, IP kamu lebih aman.
 - ✅ **Caching Cerdas:** Pakai Redis buat nge-cache data, jadi akses lebih ngebut.
 - ✅ **Dokumentasi Interaktif:** Dokumentasi lengkap dan bisa langsung dicoba pake Swagger.
@@ -72,7 +73,9 @@ API ini bergantung pada *scraper* untuk mengambil konten dari situs pihak ketiga
     ```bash
     cp .env.example .env
     ```
-    Lalu, isi semua variabel yang ada di dalam file `.env` tersebut.
+    Lalu, isi semua variabel yang ada di dalam file `.env` tersebut. Variabel yang paling penting adalah:
+    - `API_AUTH_ENABLED`: Atur ke `true` untuk mengaktifkan keamanan API key, atau `false` untuk mematikannya.
+    - `API_KEY`: Isi dengan kunci rahasia jika autentikasi diaktifkan.
 
 4.  **Jalankan Server:**
     -   **Untuk Production:**
@@ -101,7 +104,7 @@ Dokumentasi API lengkap dan interaktif tersedia melalui Swagger UI. Setelah serv
 
 **👉 `http://localhost:3000/docs` 👈**
 
-Di sana kamu bisa lihat semua endpoint yang tersedia, parameter yang dibutuhkan, dan bahkan mencoba langsung API-nya.
+**Penting:** Jika `API_AUTH_ENABLED` diatur ke `true`, setiap permintaan ke endpoint di bawah `/api` harus menyertakan header `x-api-key` dengan API key yang valid.
 
 #### Ringkasan Endpoint
 
@@ -110,11 +113,42 @@ Di sana kamu bisa lihat semua endpoint yang tersedia, parameter yang dibutuhkan,
 | `GET`  | `/api/home`                         | Mengambil daftar anime terbaru.                |
 | `GET`  | `/api/anime/{id}`                   | Mengambil detail sebuah anime.                 |
 | `GET`  | `/api/anime/{id}/episode/{episode}` | Mendapatkan sumber stream untuk sebuah episode. |
-| `GET`  | `/api/anime/stream/{stream_id}`     | Mem-proxy dan menayangkan video stream.        |
-| `GET`  | `/api/search`           | Mencari anime berdasarkan kata kunci dengan paginasi. Mendukung query `q`, `page`, dan `perPage`.          |
+| `GET`  | `/api/anime/stream/{stream_id}`     | Mem-proxy dan menayangkan video stream.        | 
+| `GET`  | `/api/search`                       | Mencari anime berdasarkan kata kunci dengan paginasi. Mendukung query `q`, `page`, dan `perPage`.          |
 | `GET`  | `/api/genre/{genre}`                | Mencari anime berdasarkan genre dengan paginasi. Mendukung query `page` dan `perPage`. |
 
+
 ### Contoh Implementasi
+
+#### Mengambil Daftar Anime Terbaru
+
+**Endpoint:**
+`GET /api/home`
+
+**Header (jika auth aktif):**
+`x-api-key: your-secret-api-key`
+
+**Contoh Respons Sukses:**
+Respons akan berisi daftar anime yang sudah diperkaya dengan data dari Anilist.
+
+```json
+[
+  {
+    "id": 16498,
+    "title": "Shingeki no Kyojin",
+    "thumbnail": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498-C6b2O839Dk4p.jpg",
+    "rating": 85,
+    "last_episode": 12
+  },
+  {
+    "id": 153518,
+    "title": "Bocchi the Rock!",
+    "thumbnail": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx153518-7FNR9GfFFh43.jpg",
+    "rating": 88,
+    "last_episode": 12
+  }
+]
+```
 
 #### Pencarian Anime Berdasarkan Kata Kunci
 
@@ -205,7 +239,8 @@ Respons akan berisi informasi paginasi (`pageInfo`) dan daftar anime (`anime`).
 4.  **Load More:** Jika `true`, panggil lagi API dengan menaikkan nomor `page` (`page + 1`). Tambahkan hasil baru ke daftar anime yang sudah ada.
 5.  Ulangi langkah 3 dan 4 sampai `hasNextPage` menjadi `false`.
 
----
+
+--- 
 
 ### 📜 Skrip Tambahan
 
@@ -223,6 +258,7 @@ Proyek ini punya beberapa skrip tambahan yang bisa dijalankan via `bun run`:
     # Contoh: bun run sync:map samehadaku
     bun run sync:map <source>
     ```
+-   `bun run scan <url>`: Melakukan scan mendalam pada struktur HTML sebuah URL dan menampilkannya dalam format JSON.
 
 ---
 
