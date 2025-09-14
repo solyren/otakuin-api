@@ -2,6 +2,10 @@ import { Elysia, t } from 'elysia';
 
 export const security = new Elysia()
     .onRequest(({ request, set }) => {
+        if (process.env.API_AUTH_ENABLED !== 'true') {
+            return;
+        }
+
         const apiKey = request.headers.get('x-api-key');
 
         if (apiKey !== process.env.API_KEY) {
