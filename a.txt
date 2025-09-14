@@ -1,0 +1,14 @@
+$ pm2 start ecosystem.config.js --name api
+[PM2][ERROR] File ecosystem.config.js malformated
+ReferenceError: module is not defined in ES module scope
+This file is being treated as an ES module because it has a '.js' file extension and '/home/devbox/otakuin-api/package.json' contains "type": "module". To treat it as a CommonJS script, rename it to use the '.cjs' file extension.
+    at file:///home/devbox/otakuin-api/ecosystem.config.js:1:1
+    at ModuleJobSync.runSync (node:internal/modules/esm/module_job:458:37)    at ModuleLoader.importSyncForRequire (node:internal/modules/esm/loader:433:47)
+    at loadESMFromCJS (node:internal/modules/cjs/loader:1537:24)
+    at Module._compile (node:internal/modules/cjs/loader:1688:5)
+    at Object..js (node:internal/modules/cjs/loader:1839:10)
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    at Function._load (node:internal/modules/cjs/loader:1263:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+devbox@devbox:~/otakuin-api$

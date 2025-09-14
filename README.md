@@ -91,7 +91,7 @@ API ini bergantung pada *scraper* untuk mengambil konten dari situs pihak ketiga
         b. **Jalankan dengan file konfigurasi:**
         Saya sudah menyediakan file `ecosystem.config.js` untuk mempermudah setup. Cukup jalankan perintah berikut dari root direktori proyek:
         ```bash
-        pm2 start ecosystem.config.js
+        pm2 start ecosystem.config.cjs
         ```
         PM2 akan secara otomatis menjalankan server utama dan proses worker di latar belakang. Anda bisa memonitor log dengan `pm2 logs`.
 
