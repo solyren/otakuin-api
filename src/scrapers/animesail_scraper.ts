@@ -1,7 +1,6 @@
 import * as cheerio from 'cheerio';
 import { redis } from '../lib/redis';
-import { Agent } from 'https';
-import { setGlobalDispatcher } from 'undici';
+import { logger, errorLogger } from '../lib/logger';
 
 const BASE_URL = `${process.env.ANIMESAIL_BASE_URL}/anime/`;
 const SOURCE_KEY = 'slugs:animesail';
@@ -13,23 +12,18 @@ const fetchOptions = {
     }
 };
 
-// --- Set Global Dispatcher ---
-const agent = new Agent({
-    connect: {
-        rejectUnauthorized: false
-    }
-});
-setGlobalDispatcher(agent);
-
 // --- Start Animesail Scraping ---
 export async function startAnimesailScraping() {
     const url = BASE_URL;
+    logger(`[Animesail] Starting scraping from ${url}`);
 
     try {
         await redis.del(SOURCE_KEY);
+        logger(`[Animesail] Cleared old data from ${SOURCE_KEY}`);
 
         const response = await fetch(url, fetchOptions);
         if (!response.ok) {
+            errorLogger(new Error(`[Animesail] Failed to fetch ${url}. Status: ${response.status}`));
             return;
         }
 
@@ -37,8 +31,10 @@ export async function startAnimesailScraping() {
         const $ = cheerio.load(html);
 
         const animeLinks = $('div.soralist a.series');
+        logger(`[Animesail] Found ${animeLinks.length} anime links.`);
 
         if (animeLinks.length === 0) {
+            logger('[Animesail] No anime links found. Exiting.');
             return;
         }
 
@@ -54,7 +50,10 @@ export async function startAnimesailScraping() {
         });
 
         await pipeline.exec();
+        logger(`[Animesail] Successfully stored ${animeLinks.length} slugs in Redis.`);
 
-    } catch (error) {
+    } catch (error: any) {
+        errorLogger(new Error(`[Animesail] An error occurred: ${error.message}`));
+        throw error;
     }
 }

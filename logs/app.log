@@ -1,0 +1,168 @@
+[2025-09-14T12:13:42.969Z] Starting all scrapers...
+[2025-09-14T12:13:42.970Z] Starting Animesail scraper...
+[2025-09-14T12:13:44.311Z] Animesail scraper finished.
+[2025-09-14T12:13:49.314Z] Starting Samehadaku scraper...
+[2025-09-14T12:14:28.644Z] Starting all scrapers...
+[2025-09-14T12:14:28.644Z] Starting Animesail scraper...
+[2025-09-14T12:14:29.614Z] Animesail scraper finished.
+[2025-09-14T12:14:34.617Z] Starting Samehadaku scraper...
+[2025-09-14T12:15:12.468Z] Samehadaku scraper finished.
+[2025-09-14T12:15:12.469Z] All scrapers finished.
+[2025-09-14T12:20:47.074Z] Starting all scrapers...
+[2025-09-14T12:20:47.076Z] Starting Animesail scraper...
+[2025-09-14T12:20:47.078Z] [Animesail] Starting scraping from https://154.26.137.28/anime/
+[2025-09-14T12:20:47.949Z] [Animesail] Cleared old data from slugs:animesail
+[2025-09-14T12:20:48.935Z] [Animesail] Found 4803 anime links.
+[2025-09-14T12:20:50.301Z] [Animesail] Successfully stored 4803 slugs in Redis.
+[2025-09-14T12:20:50.301Z] Animesail scraper finished.
+[2025-09-14T12:20:55.304Z] Starting Samehadaku scraper...
+[2025-09-14T12:20:55.310Z] [Samehadaku] Starting scraping...
+[2025-09-14T12:20:55.372Z] [Samehadaku] Cleared old data from slugs:samehadaku
+[2025-09-14T12:20:55.374Z] [Samehadaku] Scraping page 1 from https://v1.samehadaku.how/daftar-anime-2/
+[2025-09-14T12:20:56.205Z] [Samehadaku] Found 30 anime links on page 1.
+[2025-09-14T12:20:56.291Z] [Samehadaku] Successfully stored 30 slugs from page 1 in Redis.
+[2025-09-14T12:20:57.294Z] [Samehadaku] Scraping page 2 from https://v1.samehadaku.how/daftar-anime-2/page/2/
+[2025-09-14T12:20:58.837Z] [Samehadaku] Found 30 anime links on page 2.
+[2025-09-14T12:20:58.895Z] [Samehadaku] Successfully stored 30 slugs from page 2 in Redis.
+[2025-09-14T12:20:59.920Z] [Samehadaku] Scraping page 3 from https://v1.samehadaku.how/daftar-anime-2/page/3/
+[2025-09-14T12:21:01.803Z] [Samehadaku] Found 30 anime links on page 3.
+[2025-09-14T12:21:01.898Z] [Samehadaku] Successfully stored 30 slugs from page 3 in Redis.
+[2025-09-14T12:21:02.925Z] [Samehadaku] Scraping page 4 from https://v1.samehadaku.how/daftar-anime-2/page/4/
+[2025-09-14T12:21:03.451Z] [Samehadaku] Found 30 anime links on page 4.
+[2025-09-14T12:21:03.525Z] [Samehadaku] Successfully stored 30 slugs from page 4 in Redis.
+[2025-09-14T12:21:04.531Z] [Samehadaku] Scraping page 5 from https://v1.samehadaku.how/daftar-anime-2/page/5/
+[2025-09-14T12:21:05.002Z] [Samehadaku] Found 30 anime links on page 5.
+[2025-09-14T12:21:05.054Z] [Samehadaku] Successfully stored 30 slugs from page 5 in Redis.
+[2025-09-14T12:21:06.055Z] [Samehadaku] Scraping page 6 from https://v1.samehadaku.how/daftar-anime-2/page/6/
+[2025-09-14T12:21:06.780Z] [Samehadaku] Found 30 anime links on page 6.
+[2025-09-14T12:21:06.888Z] [Samehadaku] Successfully stored 30 slugs from page 6 in Redis.
+[2025-09-14T12:21:07.888Z] [Samehadaku] Scraping page 7 from https://v1.samehadaku.how/daftar-anime-2/page/7/
+[2025-09-14T12:21:08.393Z] [Samehadaku] Found 30 anime links on page 7.
+[2025-09-14T12:21:08.472Z] [Samehadaku] Successfully stored 30 slugs from page 7 in Redis.
+[2025-09-14T12:21:09.483Z] [Samehadaku] Scraping page 8 from https://v1.samehadaku.how/daftar-anime-2/page/8/
+[2025-09-14T12:21:09.999Z] [Samehadaku] Found 30 anime links on page 8.
+[2025-09-14T12:21:10.094Z] [Samehadaku] Successfully stored 30 slugs from page 8 in Redis.
+[2025-09-14T12:21:11.115Z] [Samehadaku] Scraping page 9 from https://v1.samehadaku.how/daftar-anime-2/page/9/
+[2025-09-14T12:21:11.654Z] [Samehadaku] Found 30 anime links on page 9.
+[2025-09-14T12:21:11.721Z] [Samehadaku] Successfully stored 30 slugs from page 9 in Redis.
+[2025-09-14T12:21:12.744Z] [Samehadaku] Scraping page 10 from https://v1.samehadaku.how/daftar-anime-2/page/10/
+[2025-09-14T12:21:13.157Z] [Samehadaku] Found 30 anime links on page 10.
+[2025-09-14T12:21:13.276Z] [Samehadaku] Successfully stored 30 slugs from page 10 in Redis.
+[2025-09-14T12:21:14.291Z] [Samehadaku] Scraping page 11 from https://v1.samehadaku.how/daftar-anime-2/page/11/
+[2025-09-14T12:21:15.384Z] [Samehadaku] Found 30 anime links on page 11.
+[2025-09-14T12:21:15.447Z] [Samehadaku] Successfully stored 30 slugs from page 11 in Redis.
+[2025-09-14T12:21:16.472Z] [Samehadaku] Scraping page 12 from https://v1.samehadaku.how/daftar-anime-2/page/12/
+[2025-09-14T12:21:17.522Z] [Samehadaku] Found 30 anime links on page 12.
+[2025-09-14T12:21:17.594Z] [Samehadaku] Successfully stored 30 slugs from page 12 in Redis.
+[2025-09-14T12:21:18.609Z] [Samehadaku] Scraping page 13 from https://v1.samehadaku.how/daftar-anime-2/page/13/
+[2025-09-14T12:21:19.087Z] [Samehadaku] Found 30 anime links on page 13.
+[2025-09-14T12:21:19.162Z] [Samehadaku] Successfully stored 30 slugs from page 13 in Redis.
+[2025-09-14T12:21:20.169Z] [Samehadaku] Scraping page 14 from https://v1.samehadaku.how/daftar-anime-2/page/14/
+[2025-09-14T12:21:21.536Z] [Samehadaku] Found 30 anime links on page 14.
+[2025-09-14T12:21:21.608Z] [Samehadaku] Successfully stored 30 slugs from page 14 in Redis.
+[2025-09-14T12:21:22.611Z] [Samehadaku] Scraping page 15 from https://v1.samehadaku.how/daftar-anime-2/page/15/
+[2025-09-14T12:21:23.533Z] [Samehadaku] Found 30 anime links on page 15.
+[2025-09-14T12:21:23.671Z] [Samehadaku] Successfully stored 30 slugs from page 15 in Redis.
+[2025-09-14T12:21:24.694Z] [Samehadaku] Scraping page 16 from https://v1.samehadaku.how/daftar-anime-2/page/16/
+[2025-09-14T12:21:25.499Z] [Samehadaku] Found 30 anime links on page 16.
+[2025-09-14T12:21:25.562Z] [Samehadaku] Successfully stored 30 slugs from page 16 in Redis.
+[2025-09-14T12:21:26.588Z] [Samehadaku] Scraping page 17 from https://v1.samehadaku.how/daftar-anime-2/page/17/
+[2025-09-14T12:21:27.147Z] [Samehadaku] Found 30 anime links on page 17.
+[2025-09-14T12:21:27.213Z] [Samehadaku] Successfully stored 30 slugs from page 17 in Redis.
+[2025-09-14T12:21:28.214Z] [Samehadaku] Scraping page 18 from https://v1.samehadaku.how/daftar-anime-2/page/18/
+[2025-09-14T12:21:28.654Z] [Samehadaku] Found 30 anime links on page 18.
+[2025-09-14T12:21:28.711Z] [Samehadaku] Successfully stored 30 slugs from page 18 in Redis.
+[2025-09-14T12:21:29.715Z] [Samehadaku] Scraping page 19 from https://v1.samehadaku.how/daftar-anime-2/page/19/
+[2025-09-14T12:21:30.121Z] [Samehadaku] Found 30 anime links on page 19.
+[2025-09-14T12:21:30.190Z] [Samehadaku] Successfully stored 30 slugs from page 19 in Redis.
+[2025-09-14T12:21:31.191Z] [Samehadaku] Scraping page 20 from https://v1.samehadaku.how/daftar-anime-2/page/20/
+[2025-09-14T12:21:31.635Z] [Samehadaku] Found 30 anime links on page 20.
+[2025-09-14T12:21:31.705Z] [Samehadaku] Successfully stored 30 slugs from page 20 in Redis.
+[2025-09-14T12:21:32.718Z] [Samehadaku] Scraping page 21 from https://v1.samehadaku.how/daftar-anime-2/page/21/
+[2025-09-14T12:21:34.080Z] [Samehadaku] Found 17 anime links on page 21.
+[2025-09-14T12:21:34.132Z] [Samehadaku] Successfully stored 17 slugs from page 21 in Redis.
+[2025-09-14T12:21:35.133Z] [Samehadaku] Scraping page 22 from https://v1.samehadaku.how/daftar-anime-2/page/22/
+[2025-09-14T12:21:35.489Z] [Samehadaku] Found 0 anime links on page 22.
+[2025-09-14T12:21:35.489Z] [Samehadaku] No more anime links found. Exiting.
+[2025-09-14T12:21:35.543Z] [Samehadaku] Finished scraping. Total slugs stored: 615
+[2025-09-14T12:21:35.544Z] Samehadaku scraper finished.
+[2025-09-14T12:21:35.545Z] All scrapers finished.
+[2025-09-14T12:22:57.066Z] Starting all scrapers...
+[2025-09-14T12:22:57.070Z] Starting Animesail scraper...
+[2025-09-14T12:22:57.075Z] [Animesail] Starting scraping from https://154.26.137.28/anime/
+[2025-09-14T12:22:57.933Z] [Animesail] Cleared old data from slugs:animesail
+[2025-09-14T12:22:58.628Z] [Animesail] Found 4803 anime links.
+[2025-09-14T12:22:59.952Z] [Animesail] Successfully stored 4803 slugs in Redis.
+[2025-09-14T12:22:59.953Z] Animesail scraper finished.
+[2025-09-14T12:23:04.957Z] Starting Samehadaku scraper...
+[2025-09-14T12:23:04.983Z] [Samehadaku] Starting scraping...
+[2025-09-14T12:23:05.174Z] [Samehadaku] Cleared old data from slugs:samehadaku
+[2025-09-14T12:23:05.176Z] [Samehadaku] Scraping page 1 from https://v1.samehadaku.how/daftar-anime-2/
+[2025-09-14T12:23:05.919Z] [Samehadaku] Found 30 anime links on page 1.
+[2025-09-14T12:23:06.031Z] [Samehadaku] Successfully stored 30 slugs from page 1 in Redis.
+[2025-09-14T12:23:07.033Z] [Samehadaku] Scraping page 2 from https://v1.samehadaku.how/daftar-anime-2/page/2/
+[2025-09-14T12:23:07.525Z] [Samehadaku] Found 30 anime links on page 2.
+[2025-09-14T12:23:07.602Z] [Samehadaku] Successfully stored 30 slugs from page 2 in Redis.
+[2025-09-14T12:23:08.606Z] [Samehadaku] Scraping page 3 from https://v1.samehadaku.how/daftar-anime-2/page/3/
+[2025-09-14T12:23:09.028Z] [Samehadaku] Found 30 anime links on page 3.
+[2025-09-14T12:23:09.096Z] [Samehadaku] Successfully stored 30 slugs from page 3 in Redis.
+[2025-09-14T12:23:10.100Z] [Samehadaku] Scraping page 4 from https://v1.samehadaku.how/daftar-anime-2/page/4/
+[2025-09-14T12:23:10.555Z] [Samehadaku] Found 30 anime links on page 4.
+[2025-09-14T12:23:10.611Z] [Samehadaku] Successfully stored 30 slugs from page 4 in Redis.
+[2025-09-14T12:23:11.636Z] [Samehadaku] Scraping page 5 from https://v1.samehadaku.how/daftar-anime-2/page/5/
+[2025-09-14T12:23:12.395Z] [Samehadaku] Found 30 anime links on page 5.
+[2025-09-14T12:23:12.451Z] [Samehadaku] Successfully stored 30 slugs from page 5 in Redis.
+[2025-09-14T12:23:13.458Z] [Samehadaku] Scraping page 6 from https://v1.samehadaku.how/daftar-anime-2/page/6/
+[2025-09-14T12:23:13.959Z] [Samehadaku] Found 30 anime links on page 6.
+[2025-09-14T12:23:14.035Z] [Samehadaku] Successfully stored 30 slugs from page 6 in Redis.
+[2025-09-14T12:23:15.058Z] [Samehadaku] Scraping page 7 from https://v1.samehadaku.how/daftar-anime-2/page/7/
+[2025-09-14T12:23:15.812Z] [Samehadaku] Found 30 anime links on page 7.
+[2025-09-14T12:23:15.894Z] [Samehadaku] Successfully stored 30 slugs from page 7 in Redis.
+[2025-09-14T12:23:16.912Z] [Samehadaku] Scraping page 8 from https://v1.samehadaku.how/daftar-anime-2/page/8/
+[2025-09-14T12:23:17.431Z] [Samehadaku] Found 30 anime links on page 8.
+[2025-09-14T12:23:17.534Z] [Samehadaku] Successfully stored 30 slugs from page 8 in Redis.
+[2025-09-14T12:23:18.566Z] [Samehadaku] Scraping page 9 from https://v1.samehadaku.how/daftar-anime-2/page/9/
+[2025-09-14T12:23:19.000Z] [Samehadaku] Found 30 anime links on page 9.
+[2025-09-14T12:23:19.080Z] [Samehadaku] Successfully stored 30 slugs from page 9 in Redis.
+[2025-09-14T12:23:20.094Z] [Samehadaku] Scraping page 10 from https://v1.samehadaku.how/daftar-anime-2/page/10/
+[2025-09-14T12:23:20.497Z] [Samehadaku] Found 30 anime links on page 10.
+[2025-09-14T12:23:20.580Z] [Samehadaku] Successfully stored 30 slugs from page 10 in Redis.
+[2025-09-14T12:23:21.603Z] [Samehadaku] Scraping page 11 from https://v1.samehadaku.how/daftar-anime-2/page/11/
+[2025-09-14T12:23:22.181Z] [Samehadaku] Found 30 anime links on page 11.
+[2025-09-14T12:23:22.242Z] [Samehadaku] Successfully stored 30 slugs from page 11 in Redis.
+[2025-09-14T12:23:23.259Z] [Samehadaku] Scraping page 12 from https://v1.samehadaku.how/daftar-anime-2/page/12/
+[2025-09-14T12:23:23.700Z] [Samehadaku] Found 30 anime links on page 12.
+[2025-09-14T12:23:23.760Z] [Samehadaku] Successfully stored 30 slugs from page 12 in Redis.
+[2025-09-14T12:23:24.783Z] [Samehadaku] Scraping page 13 from https://v1.samehadaku.how/daftar-anime-2/page/13/
+[2025-09-14T12:23:25.828Z] [Samehadaku] Found 30 anime links on page 13.
+[2025-09-14T12:23:25.897Z] [Samehadaku] Successfully stored 30 slugs from page 13 in Redis.
+[2025-09-14T12:23:26.917Z] [Samehadaku] Scraping page 14 from https://v1.samehadaku.how/daftar-anime-2/page/14/
+[2025-09-14T12:23:27.394Z] [Samehadaku] Found 30 anime links on page 14.
+[2025-09-14T12:23:27.452Z] [Samehadaku] Successfully stored 30 slugs from page 14 in Redis.
+[2025-09-14T12:23:28.480Z] [Samehadaku] Scraping page 15 from https://v1.samehadaku.how/daftar-anime-2/page/15/
+[2025-09-14T12:23:30.208Z] [Samehadaku] Found 30 anime links on page 15.
+[2025-09-14T12:23:30.279Z] [Samehadaku] Successfully stored 30 slugs from page 15 in Redis.
+[2025-09-14T12:23:31.282Z] [Samehadaku] Scraping page 16 from https://v1.samehadaku.how/daftar-anime-2/page/16/
+[2025-09-14T12:23:32.065Z] [Samehadaku] Found 30 anime links on page 16.
+[2025-09-14T12:23:32.121Z] [Samehadaku] Successfully stored 30 slugs from page 16 in Redis.
+[2025-09-14T12:23:33.142Z] [Samehadaku] Scraping page 17 from https://v1.samehadaku.how/daftar-anime-2/page/17/
+[2025-09-14T12:23:33.541Z] [Samehadaku] Found 30 anime links on page 17.
+[2025-09-14T12:23:33.607Z] [Samehadaku] Successfully stored 30 slugs from page 17 in Redis.
+[2025-09-14T12:23:34.635Z] [Samehadaku] Scraping page 18 from https://v1.samehadaku.how/daftar-anime-2/page/18/
+[2025-09-14T12:23:35.038Z] [Samehadaku] Found 30 anime links on page 18.
+[2025-09-14T12:23:35.101Z] [Samehadaku] Successfully stored 30 slugs from page 18 in Redis.
+[2025-09-14T12:23:36.102Z] [Samehadaku] Scraping page 19 from https://v1.samehadaku.how/daftar-anime-2/page/19/
+[2025-09-14T12:23:36.775Z] [Samehadaku] Found 30 anime links on page 19.
+[2025-09-14T12:23:36.833Z] [Samehadaku] Successfully stored 30 slugs from page 19 in Redis.
+[2025-09-14T12:23:37.854Z] [Samehadaku] Scraping page 20 from https://v1.samehadaku.how/daftar-anime-2/page/20/
+[2025-09-14T12:23:38.298Z] [Samehadaku] Found 30 anime links on page 20.
+[2025-09-14T12:23:38.360Z] [Samehadaku] Successfully stored 30 slugs from page 20 in Redis.
+[2025-09-14T12:23:39.369Z] [Samehadaku] Scraping page 21 from https://v1.samehadaku.how/daftar-anime-2/page/21/
+[2025-09-14T12:23:39.705Z] [Samehadaku] Found 17 anime links on page 21.
+[2025-09-14T12:23:39.791Z] [Samehadaku] Successfully stored 17 slugs from page 21 in Redis.
+[2025-09-14T12:23:40.817Z] [Samehadaku] Scraping page 22 from https://v1.samehadaku.how/daftar-anime-2/page/22/
+[2025-09-14T12:23:41.176Z] [Samehadaku] Found 0 anime links on page 22.
+[2025-09-14T12:23:41.180Z] [Samehadaku] No more anime links found. Exiting.
+[2025-09-14T12:23:41.261Z] [Samehadaku] Finished scraping. Total slugs stored: 615
+[2025-09-14T12:23:41.262Z] Samehadaku scraper finished.
+[2025-09-14T12:23:41.263Z] All scrapers finished.
