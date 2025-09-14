@@ -146,43 +146,52 @@ const getAnimesailEpisodeList = async (id: number, animeDetails: any) => {
 
     const animesailUrl = animesailSlug.startsWith('http') ? animesailSlug : `${process.env.ANIMESAIL_BASE_URL}${animesailSlug}`;
 
-    try {
-        const response = await axios.get(animesailUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
-                'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=ID',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                'Accept-Language': 'en-US,en;q=0.9'
-            },
-            httpsAgent: new https.Agent({
-                rejectUnauthorized: false
-            })
-        });
+    for (let i = 0; i < 3; i++) {
+        try {
+            const response = await axios.get(animesailUrl, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+                    'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=ID',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                    'Accept-Language': 'en-US,en;q=0.9'
+                },
+                httpsAgent: new https.Agent({
+                    rejectUnauthorized: false
+                })
+            });
 
-        if (response.status !== 200) {
-            return [];
+            if (response.status === 200) {
+                const html = response.data;
+                const $ = cheerio.load(html);
+                const episodeList: { episode: number; title: string; url: string }[] = [];
+                $('ul.daftar li a').each((i, el) => {
+                    const title = $(el).text().trim();
+                    const url = $(el).attr('href') || '';
+                    const episodeMatch = title.match(/Episode\s+(\d+)/i);
+                    const episode = episodeMatch ? parseInt(episodeMatch[1]) : 0;
+
+                    if (episode > 0) {
+                        episodeList.push({ episode, title, url });
+                    }
+                });
+
+                if (episodeList.length > 0) {
+                    return episodeList.sort((a, b) => b.episode - a.episode);
+                } else if (i === 0) {
+                    console.log('getAnimesailEpisodeList failed. Received HTML:');
+                    console.log(html);
+                }
+            }
+        } catch (error) {
+            console.error(`Error fetching Animesail episode list (attempt ${i + 1}):`, error);
         }
 
-        const html = response.data;
-        const $ = cheerio.load(html);
-
-        const episodeList: { episode: number; title: string; url: string }[] = [];
-        $('ul.daftar li a').each((i, el) => {
-            const title = $(el).text().trim();
-            const url = $(el).attr('href') || '';
-            const episodeMatch = title.match(/Episode\s+(\d+)/i);
-            const episode = episodeMatch ? parseInt(episodeMatch[1]) : 0;
-
-            if (episode > 0) {
-                episodeList.push({ episode, title, url });
-            }
-        });
-
-        return episodeList.sort((a, b) => b.episode - a.episode);
-    } catch (error) {
-        console.error('Error fetching Animesail episode list:', error);
-        return [];
+        if (i < 2) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+        }
     }
+
+    return [];
 }
 
 // --- Format Episode Slug ---
@@ -399,10 +408,6 @@ export const anime = new Elysia({ prefix: '/anime' })
         return response;
 
     }, {
-        params: t.Object({
-            id: t.Numeric(),
-            episode: t.Numeric()
-        }),
         detail: {
             summary: 'Sumber Stream Episode',
             description: 'Mencari dan menyediakan sumber stream untuk episode anime tertentu dari berbagai provider.',

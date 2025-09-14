@@ -24,29 +24,42 @@ const animesailFetchOptions = {
 
 // --- Resolve Player ---
 async function resolvePlayer(url: string, playerName: string): Promise<string | null> {
-    try {
-        const { data: html } = await axios.get(url, {
-            headers: {
-                'User-Agent': FAKE_USER_AGENT,
-                'Referer': process.env.ANIMESAIL_BASE_URL,
-                'Cookie': '_as_ipin_tz=UTC; _as_ipin_lc=en-US; _as_ipin_ct=ID',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                'Accept-Language': 'en-US,en;q=0.9'
-            },
-            httpsAgent: new https.Agent({
-                rejectUnauthorized: false
-            })
-        });
-        const $ = cheerio.load(html);
-        const videoSource = $('video source').first().attr('src');
+    for (let i = 0; i < 3; i++) {
+        try {
+            const response = await axios.get(url, {
+                headers: {
+                    'User-Agent': FAKE_USER_AGENT,
+                    'Referer': process.env.ANIMESAIL_BASE_URL,
+                    'Cookie': '_as_ipin_tz=UTC; _as_ipin_lc=en-US; _as_ipin_ct=ID',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                    'Accept-Language': 'en-US,en;q=0.9'
+                },
+                httpsAgent: new https.Agent({
+                    rejectUnauthorized: false
+                })
+            });
 
-        if (videoSource) {
-            return videoSource;
+            if (response.status === 200) {
+                const html = response.data;
+                const $ = cheerio.load(html);
+                const videoSource = $('video source').first().attr('src');
+
+                if (videoSource) {
+                    return videoSource;
+                } else if (i === 0) {
+                    console.log(`resolvePlayer for ${url} failed. Received HTML:`);
+                    console.log(html);
+                }
+            }
+        } catch (error) {
+            console.error(`Error resolving player (attempt ${i + 1}):`, error);
         }
-        return null;
-    } catch (error) {
-        return null;
+
+        if (i < 2) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+        }
     }
+    return null;
 }
 
 // --- Get Samehadaku Embeds ---
@@ -109,49 +122,69 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
 
 // --- Get Animesail Embeds ---
 async function getAnimesailEmbeds(url: string): Promise<any[]> {
-    try {
-        const response = await fetch(url, animesailFetchOptions);
-        if (!response.ok) {
-            return [];
-        }
-        const html = await response.text();
-        const $ = cheerio.load(html);
+    for (let i = 0; i < 3; i++) {
+        try {
+            const response = await axios.get(url, {
+                headers: {
+                    'User-Agent': FAKE_USER_AGENT,
+                    'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=ID',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                    'Accept-Language': 'en-US,en;q=0.9'
+                },
+                httpsAgent: new https.Agent({
+                    rejectUnauthorized: false
+                })
+            });
 
-        const embeds = [];
-        const mirrorOptions = $('select.mirror option');
+            if (response.status === 200) {
+                const html = response.data;
+                const $ = cheerio.load(html);
+                const embeds = [];
+                const mirrorOptions = $('select.mirror option');
 
-        for (const el of mirrorOptions.toArray()) {
-            const option = $(el);
-            const serverName = option.text().trim();
-            const base64Embed = option.data('em');
+                for (const el of mirrorOptions.toArray()) {
+                    const option = $(el);
+                    const serverName = option.text().trim();
+                    const base64Embed = option.data('em');
 
-            if (!serverName || !base64Embed) continue;
+                    if (!serverName || !base64Embed) continue;
 
-            try {
-                const decodedIframe = Buffer.from(base64Embed, 'base64').toString('utf-8');
-                const $iframe = cheerio.load(decodedIframe);
-                const originalUrl = $iframe('iframe').attr('src');
+                    try {
+                        const decodedIframe = Buffer.from(base64Embed, 'base64').toString('utf-8');
+                        const $iframe = cheerio.load(decodedIframe);
+                        const originalUrl = $iframe('iframe').attr('src');
 
-                if (originalUrl) {
-                    let resolvedUrl: string | null = originalUrl;
-                    if (originalUrl.includes('/utils/player/')) {
-                        const playerName = originalUrl.split('/utils/player/')[1].split('/')[0];
-                        resolvedUrl = await resolvePlayer(originalUrl, playerName);
-                    }
+                        if (originalUrl) {
+                            let resolvedUrl: string | null = originalUrl;
+                            if (originalUrl.includes('/utils/player/')) {
+                                const playerName = originalUrl.split('/utils/player/')[1].split('/')[0];
+                                resolvedUrl = await resolvePlayer(originalUrl, playerName);
+                            }
 
-                    if (resolvedUrl) {
-                        embeds.push({ server: serverName, url: resolvedUrl });
+                            if (resolvedUrl) {
+                                embeds.push({ server: serverName, url: resolvedUrl });
+                            }
+                        }
+                    } catch (e) {
                     }
                 }
-            } catch (e) {
+
+                if (embeds.length > 0) {
+                    return embeds;
+                } else if (i === 0) {
+                    console.log(`getAnimesailEmbeds for ${url} failed. Received HTML:`);
+                    console.log(html);
+                }
             }
+        } catch (error) {
+            console.error(`Error getting Animesail embeds (attempt ${i + 1}):`, error);
         }
 
-        return embeds;
-
-    } catch (error) {
-        return [];
+        if (i < 2) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+        }
     }
+    return [];
 }
 
 

@@ -28,32 +28,46 @@ export async function startAnimesailScraping() {
         await redis.del(SOURCE_KEY);
         logger(`[Animesail] Cleared old data from ${SOURCE_KEY}`);
 
-        const response = await axios.get(url, axiosConfig);
+        for (let i = 0; i < 3; i++) {
+            const response = await axios.get(url, axiosConfig);
 
-        if (response.status !== 200) {
-            errorLogger(new Error(`[Animesail] Failed to fetch ${url}. Status: ${response.status}`));
-            return;
+            if (response.status !== 200) {
+                errorLogger(new Error(`[Animesail] Failed to fetch ${url}. Status: ${response.status}`));
+                return;
+            }
+
+            const html = response.data;
+            const $ = cheerio.load(html);
+
+            const animeLinks = $('div.soralist a.series');
+            logger(`[Animesail] Found ${animeLinks.length} anime links on attempt ${i + 1}.`);
+
+            if (animeLinks.length > 0) {
+                const pipeline = redis.pipeline();
+                animeLinks.each((i, el) => {
+                    const slug = $(el).attr('href') || '';
+                    const title = $(el).text().trim();
+
+                    if (title && slug) {
+                        pipeline.hset(SOURCE_KEY, { [title]: slug });
+                    }
+                });
+                await pipeline.exec();
+                logger(`[Animesail] Successfully stored ${animeLinks.length} slugs in Redis.`);
+                return; // Success, exit the function
+            } else if (i === 0) {
+                // On the first failed attempt, log the HTML for debugging
+                console.log('Animesail scraper failed. Received HTML:');
+                console.log(html);
+            }
+
+            if (i < 2) {
+                logger('[Animesail] No links found, retrying in 3 seconds...');
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
         }
 
-        const html = response.data;
-        const $ = cheerio.load(html);
-
-        const animeLinks = $('div.soralist a.series');
-        logger(`[Animesail] Found ${animeLinks.length} anime links.`);
-
-        const pipeline = redis.pipeline();
-
-        animeLinks.each((i, el) => {
-            const slug = $(el).attr('href') || '';
-            const title = $(el).text().trim();
-
-            if (title && slug) {
-                pipeline.hset(SOURCE_KEY, { [title]: slug });
-            }
-        });
-
-        await pipeline.exec();
-        logger(`[Animesail] Successfully stored ${animeLinks.length} slugs in Redis.`);
+        logger('[Animesail] No anime links found after 3 attempts.');
 
     } catch (error: any) {
         let errorMessage = `[Animesail] An error occurred: ${error.message}`;
