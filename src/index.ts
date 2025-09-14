@@ -1,6 +1,20 @@
 import 'dotenv/config';
-
 import { Elysia } from 'elysia';
+import { errorLogger, logger } from './lib/logger';
+
+process.on('uncaughtException', (err) => {
+    errorLogger(err);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    if (reason instanceof Error) {
+        errorLogger(reason);
+    } else {
+        logger(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+    }
+    process.exit(1);
+});
 import { home } from './routes/home';
 import { anime } from './routes/anime';
 import { stream } from './routes/stream';
@@ -10,7 +24,10 @@ import { top10 } from './routes/top10';
 import { swagger } from '@elysiajs/swagger';
 
 // --- App ---
-export const app = new Elysia();
+export const app = new Elysia().onError(({ code, error, set }) => {
+    errorLogger(error);
+    return new Response(error.toString())
+});
 
 app.use(swagger({
     path: '/docs',

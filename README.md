@@ -79,12 +79,21 @@ API ini bergantung pada *scraper* untuk mengambil konten dari situs pihak ketiga
     - `API_KEY`: Isi dengan kunci rahasia jika autentikasi diaktifkan.
 
 4.  **Jalankan Server:**
-    -   **Untuk Production:**
+
+    -   **Untuk Production (Rekomendasi):**
+        Gunakan [PM2](https://pm2.keymetrics.io/) untuk menjalankan aplikasi di mode production. PM2 akan menjaga aplikasi tetap berjalan (auto-restart) dan mempermudah pengelolaan proses.
+
+        a. **Install PM2:**
         ```bash
-        # Menjalankan server utama dan worker di latar belakang
-        bun run start
+        npm install -g pm2
         ```
-        Server akan berjalan di `http://localhost:3000`.
+
+        b. **Jalankan dengan file konfigurasi:**
+        Saya sudah menyediakan file `ecosystem.config.js` untuk mempermudah setup. Cukup jalankan perintah berikut dari root direktori proyek:
+        ```bash
+        pm2 start ecosystem.config.js
+        ```
+        PM2 akan secara otomatis menjalankan server utama dan proses worker di latar belakang. Anda bisa memonitor log dengan `pm2 logs`.
 
     -   **Untuk Development:**
         Jalankan masing-masing perintah di terminal terpisah.
