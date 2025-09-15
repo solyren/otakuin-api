@@ -1,13 +1,12 @@
 import { Elysia, t } from 'elysia';
 import { redis } from '../lib/redis';
 import Fuse from 'fuse.js';
-import { getSamehadakuEmbeds, getAnimesailEmbeds } from '../lib/embeds';
+import { getSamehadakuEmbeds, getNimegamiEmbeds } from '../lib/embeds';
 import { randomBytes } from 'crypto';
 import * as cheerio from 'cheerio';
 import { getAnilistDataById, normalizeSlug } from '../lib/anilist';
 import axios from 'axios';
 import https from 'https';
-import { HttpsProxyAgent } from 'https-proxy-agent';
 
 // --- Find Best Match ---
 const findBestMatch = (animeDetails: any, slugList: { title: string; slug: string }[]) => {
@@ -60,7 +59,8 @@ const findBestMatch = (animeDetails: any, slugList: { title: string; slug: strin
 };
 
 const SLUGS_KEY = 'slugs:samehadaku';
-const ANIME_SAIL_SLUGS_KEY = 'slugs:animesail';
+const NIMEGAMI_SLUGS_KEY = 'slugs:nimegami';
+
 const getManualMapKey = (source: string) => `manual_map:${source}:anilist_id_to_slug`;
 const STREAM_KEY_PREFIX = 'stream:';
 const STREAM_EXPIRATION_SECONDS = 21600;
@@ -125,81 +125,59 @@ const getSamehadakuEpisodeList = async (id: number, animeDetails: any) => {
     return episodeList.sort((a, b) => b.episode - a.episode);
 }
 
-// --- Get Animesail Episode List ---
-const getAnimesailEpisodeList = async (id: number, animeDetails: any) => {
-    const animesailSlugsData = await redis.hgetall(ANIME_SAIL_SLUGS_KEY);
-    const animesailManualSlug = await redis.hget(getManualMapKey('animesail'), id.toString());
+// --- Get Nimegami Episode List ---
+const getNimegamiEpisodeList = async (id: number, animeDetails: any) => {
+    const nimegamiSlugsData = await redis.hgetall(NIMEGAMI_SLUGS_KEY);
+    const nimegamiManualSlug = await redis.hget(getManualMapKey('nimegami'), id.toString());
 
-    let animesailSlug: string | null = null;
-    if (animesailManualSlug) {
-        animesailSlug = animesailManualSlug as string;
-    } else if (animesailSlugsData) {
-        const animesailSlugList = Object.entries(animesailSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
-        const match = findBestMatch(animeDetails, animesailSlugList);
+    let nimegamiSlug: string | null = null;
+    if (nimegamiManualSlug) {
+        nimegamiSlug = nimegamiManualSlug as string;
+    } else if (nimegamiSlugsData) {
+        const nimegamiSlugList = Object.entries(nimegamiSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
+        const match = findBestMatch(animeDetails, nimegamiSlugList);
         if (match) {
-            animesailSlug = match.found_slug;
+            nimegamiSlug = match.found_slug;
         }
     }
 
-    if (!animesailSlug) {
+    if (!nimegamiSlug) {
         return [];
     }
 
-    const animesailUrl = animesailSlug.startsWith('http') ? animesailSlug : `${process.env.ANIMESAIL_BASE_URL}${animesailSlug}`;
+    const nimegamiUrl = `${process.env.NIMEGAMI_BASE_URL}/${nimegamiSlug}`;
 
-    const proxy = process.env.PROXY_URL;
-    const agent = proxy ? new HttpsProxyAgent(proxy) : new https.Agent({
-        rejectUnauthorized: false
-    });
+    const response = await fetch(nimegamiUrl, { redirect: 'follow' });
 
-    const axiosConfig: any = {
-        httpsAgent: agent,
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36', // Hardcoded User-Agent
-            'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=ID', // Hardcode country to ID
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Referer': process.env.ANIMESAIL_BASE_URL
-        }
-    };
-
-    for (let i = 0; i < 3; i++) {
-        try {
-            const response = await axios.get(animesailUrl, axiosConfig);
-
-            if (response.status === 200) {
-                const html = response.data;
-                const $ = cheerio.load(html);
-                const episodeList: { episode: number; title: string; url: string }[] = [];
-                $('ul.daftar li a').each((i, el) => {
-                    const title = $(el).text().trim();
-                    const url = $(el).attr('href') || '';
-                    const episodeMatch = title.match(/Episode\s+(\d+)/i);
-                    const episode = episodeMatch ? parseInt(episodeMatch[1]) : 0;
-
-                    if (episode > 0) {
-                        episodeList.push({ episode, title, url });
-                    }
-                });
-
-                if (episodeList.length > 0) {
-                    return episodeList.sort((a, b) => b.episode - a.episode);
-                } else if (i === 0) {
-                    console.log('getAnimesailEpisodeList failed. Received HTML:');
-                    console.log(html);
-                }
-            }
-        } catch (error) {
-            console.error(`Error fetching Animesail episode list (attempt ${i + 1}):`, error);
-        }
-
-        if (i < 2) {
-            await new Promise(resolve => setTimeout(resolve, 3000));
-        }
+    const finalUrl = response.url;
+    if (!finalUrl.includes(nimegamiSlug)) {
+        console.log(`Redirect detected for slug ${nimegamiSlug}. Expected ${nimegamiUrl}, got ${finalUrl}.`);
+        return [];
     }
 
-    return [];
+    if (!response.ok) {
+        return [];
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    const episodeList: { episode: number; title: string; data: string }[] = [];
+    $('div.list_eps_stream li').each((i, el) => {
+        const title = $(el).attr('title');
+        const data = $(el).attr('data');
+        const episodeMatch = $(el).text().match(/Episode\s+(\d+(\.\d+)?)/i);
+        const episode = episodeMatch ? parseFloat(episodeMatch[1]) : 0;
+
+        if (title && data && episode > 0) {
+            episodeList.push({ episode, title, data });
+        }
+    });
+
+    return episodeList.sort((a, b) => b.episode - a.episode);
 }
+
+
 
 // --- Format Episode Slug ---
 const formatEpisodeSlug = (domain: string, pathSlug: string, episode: number) => {
@@ -216,28 +194,7 @@ const formatEpisodeSlug = (domain: string, pathSlug: string, episode: number) =>
     return `${baseUrl}/${cleanedPath}-episode-${episode}/`;
 };
 
-// --- Get Animesail Episode Url ---
-const getAnimesailEpisodeUrl = (foundEpisodeSlug: string, requestedEpisode: number): string => {
-    let baseUrl = process.env.ANIMESAIL_BASE_URL;
-    let path = foundEpisodeSlug;
 
-    if (foundEpisodeSlug.startsWith('http://') || foundEpisodeSlug.startsWith('https://')) {
-        const urlObj = new URL(foundEpisodeSlug);
-        baseUrl = urlObj.origin;
-        path = urlObj.pathname;
-    }
-
-    const pathParts = path.split('/').filter(Boolean);
-    let baseSeriesPath = '';
-    const lastPart = pathParts[pathParts.length - 1];
-    const episodeIndex = lastPart.lastIndexOf('-episode-');
-    if (episodeIndex !== -1) {
-        baseSeriesPath = lastPart.substring(0, episodeIndex);
-    } else {
-        baseSeriesPath = lastPart;
-    }
-    return `${baseUrl}/${baseSeriesPath}-episode-${requestedEpisode}/`;
-};
 
 // --- Generate Stream Ids ---
 const generateStreamIds = async (embeds: any[]): Promise<any[]> => {
@@ -286,8 +243,10 @@ export const anime = new Elysia({ prefix: '/anime' })
             episodeList = await getSamehadakuEpisodeList(id, animeDetails);
 
             if (!episodeList || episodeList.length === 0) {
-                episodeList = await getAnimesailEpisodeList(id, animeDetails);
+                episodeList = await getNimegamiEpisodeList(id, animeDetails);
             }
+
+            
 
             if (episodeList.length > 0) {
                 await redis.set(episodeCacheKey, episodeList, { ex: EPISODE_LIST_CACHE_EXPIRATION_SECONDS });
@@ -340,15 +299,15 @@ export const anime = new Elysia({ prefix: '/anime' })
             return { error: 'Anime not found on Anilist' };
         }
 
-        const [samehadakuSlugsData, animesailSlugsData, samehadakuManualSlug, animesailManualSlug] = await Promise.all([
+        const [samehadakuSlugsData, nimegamiSlugsData, samehadakuManualSlug, nimegamiManualSlug] = await Promise.all([
             redis.hgetall(SLUGS_KEY),
-            redis.hgetall(ANIME_SAIL_SLUGS_KEY),
+            redis.hgetall(NIMEGAMI_SLUGS_KEY),
             redis.hget(getManualMapKey('samehadaku'), id.toString()),
-            redis.hget(getManualMapKey('animesail'), id.toString())
+            redis.hget(getManualMapKey('nimegami'), id.toString())
         ]);
 
         const samehadakuInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
-        const animesailInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
+        const nimegamiInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
 
         if (samehadakuManualSlug) {
             samehadakuInfo.found_slug = samehadakuManualSlug as string;
@@ -366,35 +325,44 @@ export const anime = new Elysia({ prefix: '/anime' })
             }
         }
 
-        if (animesailManualSlug) {
-            animesailInfo.found_slug = animesailManualSlug as string;
-            animesailInfo.found_slug_title = 'Manual Mapping';
-            animesailInfo.match_method = 'manual';
-            animesailInfo.episode_url = getAnimesailEpisodeUrl(animesailInfo.found_slug, episode);
-        } else if (animesailSlugsData) {
-            const animesailSlugList = Object.entries(animesailSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
-            const match = findBestMatch(animeDetails, animesailSlugList);
+        if (nimegamiManualSlug) {
+            nimegamiInfo.found_slug = nimegamiManualSlug as string;
+            nimegamiInfo.found_slug_title = 'Manual Mapping';
+            nimegamiInfo.match_method = 'manual';
+            nimegamiInfo.episode_url = `${process.env.NIMEGAMI_BASE_URL}/${nimegamiInfo.found_slug}`;
+        } else if (nimegamiSlugsData) {
+            const nimegamiSlugList = Object.entries(nimegamiSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
+            const match = findBestMatch(animeDetails, nimegamiSlugList);
             if (match) {
-                animesailInfo.found_slug = match.found_slug;
-                animesailInfo.found_slug_title = match.found_slug_title;
-                animesailInfo.match_method = match.match_method;
-                animesailInfo.episode_url = getAnimesailEpisodeUrl(match.found_slug, episode);
+                nimegamiInfo.found_slug = match.found_slug;
+                nimegamiInfo.found_slug_title = match.found_slug_title;
+                nimegamiInfo.match_method = match.match_method;
+                nimegamiInfo.episode_url = `${process.env.NIMEGAMI_BASE_URL}/${match.found_slug}`;
             }
         }
 
-        if (!samehadakuInfo.found_slug && !animesailInfo.found_slug) {
+        if (!samehadakuInfo.found_slug && !nimegamiInfo.found_slug) {
             set.status = 404;
             return { error: `Could not find a matching slug for ID ${id} from either source.` };
         }
 
-        const [samehadakuEmbeds, animesailEmbeds] = await Promise.all([
+        let nimegamiEpisodeData: string | null = null;
+        if (nimegamiInfo.found_slug) {
+            const episodeList = await getNimegamiEpisodeList(id, animeDetails);
+            const foundEpisode = episodeList.find(e => e.episode === episode);
+            if (foundEpisode) {
+                nimegamiEpisodeData = foundEpisode.data;
+            }
+        }
+
+        const [samehadakuEmbeds, nimegamiEmbeds] = await Promise.all([
             samehadakuInfo.episode_url ? getSamehadakuEmbeds(samehadakuInfo.episode_url) : Promise.resolve([]),
-            animesailInfo.episode_url ? getAnimesailEmbeds(animesailInfo.episode_url) : Promise.resolve([])
+            nimegamiEpisodeData ? getNimegamiEmbeds(nimegamiEpisodeData) : Promise.resolve([])
         ]);
 
-        const [samehadakuStreams, animesailStreams] = await Promise.all([
+        const [samehadakuStreams, nimegamiStreams] = await Promise.all([
             generateStreamIds(samehadakuEmbeds),
-            generateStreamIds(animesailEmbeds)
+            generateStreamIds(nimegamiEmbeds)
         ]);
 
         const response = {
@@ -402,11 +370,11 @@ export const anime = new Elysia({ prefix: '/anime' })
             episode: episode,
             sources: {
                 samehadaku: samehadakuInfo,
-                animesail: animesailInfo,
+                nimegami: nimegamiInfo,
             },
             streams: {
                 samehadaku: samehadakuStreams,
-                animesail: animesailStreams,
+                nimegami: nimegamiStreams,
             }
         };
 

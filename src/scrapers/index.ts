@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { startAnimesailScraping } from './animesail_scraper';
+import { startNimegamiScraping } from './nimegami_scraper';
 import { startSamehadakuScraping } from './samehadaku_scraper';
 import { logger, errorLogger } from '../lib/logger';
 
@@ -7,11 +7,11 @@ import { logger, errorLogger } from '../lib/logger';
 async function scrapeAll() {
     logger('Starting all scrapers...');
     try {
-        logger('Starting Animesail scraper...');
-        await startAnimesailScraping();
-        logger('Animesail scraper finished.');
+        logger('Starting Nimegami scraper...');
+        await startNimegamiScraping();
+        logger('Nimegami scraper finished.');
     } catch (error: any) {
-        errorLogger(new Error(`Animesail scraper failed: ${error.message}`));
+        errorLogger(new Error(`Nimegami scraper failed: ${error.message}`));
     }
 
     await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds

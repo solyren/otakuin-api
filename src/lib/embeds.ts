@@ -4,7 +4,6 @@ import { Agent } from 'https';
 import { setGlobalDispatcher } from 'undici';
 import axios from 'axios';
 import https from 'https';
-import { HttpsProxyAgent } from 'https-proxy-agent';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
 
@@ -26,31 +25,24 @@ const agent = new Agent({
 
 setGlobalDispatcher(agent);
 
-const animesailFetchOptions = {
-    headers: {
-        'User-Agent': getRandomUserAgent(),
-    }
-};
-
 // --- Resolve Player ---
 async function resolvePlayer(url: string, playerName: string): Promise<string | null> {
-    const proxy = process.env.PROXY_URL;
-    const agent = proxy ? new HttpsProxyAgent(proxy) : new https.Agent({ rejectUnauthorized: false });
-
-    const axiosConfig: any = {
-        httpsAgent: agent,
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
-            'Referer': url,
-            'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=ID', // Hardcode country to ID
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'Accept-Language': 'en-US,en;q=0.9'
-        }
-    };
-
     for (let i = 0; i < 3; i++) {
         try {
-            const response = await axios.get(url, axiosConfig);
+            const initialResponse = await axios.get(url, { headers: { 'User-Agent': getRandomUserAgent() } });
+            const countryCode = initialResponse.headers['x-local'] || 'ID';
+
+            const response = await axios.get(url, {
+                headers: {
+                    'User-Agent': getRandomUserAgent(),
+                    'Referer': url,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive',
+                    'Cookie': `_as_ipin_ct=${countryCode}; _as_ipin_tz=UTC; _as_ipin_lc=en-US`
+                }
+            });
 
             if (response.status === 200) {
                 const html = response.data;
@@ -133,76 +125,23 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
     }
 }
 
-// --- Get Animesail Embeds ---
-async function getAnimesailEmbeds(url: string): Promise<any[]> {
-    const proxy = process.env.PROXY_URL;
-    const agent = proxy ? new HttpsProxyAgent(proxy) : new https.Agent({ rejectUnauthorized: false });
+// --- Get Nimegami Embeds ---
+async function getNimegamiEmbeds(data: string): Promise<any[]> {
+    try {
+        const decodedData = Buffer.from(data, 'base64').toString('utf-8');
+        const streams = JSON.parse(decodedData);
 
-    const axiosConfig: any = {
-        httpsAgent: agent,
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
-            'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=ID', // Hardcode country to ID
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Referer': process.env.ANIMESAIL_BASE_URL
-        }
-    };
-
-    for (let i = 0; i < 3; i++) {
-        try {
-            const response = await axios.get(url, axiosConfig);
-
-            if (response.status === 200) {
-                const html = response.data;
-                const $ = cheerio.load(html);
-                const embeds = [];
-                const mirrorOptions = $('select.mirror option');
-
-                for (const el of mirrorOptions.toArray()) {
-                    const option = $(el);
-                    const serverName = option.text().trim();
-                    const base64Embed = option.data('em');
-
-                    if (!serverName || !base64Embed) continue;
-
-                    try {
-                        const decodedIframe = Buffer.from(base64Embed, 'base64').toString('utf-8');
-                        const $iframe = cheerio.load(decodedIframe);
-                        const originalUrl = $iframe('iframe').attr('src');
-
-                        if (originalUrl) {
-                            let resolvedUrl: string | null = originalUrl;
-                            if (originalUrl.includes('/utils/player/')) {
-                                const playerName = originalUrl.split('/utils/player/')[1].split('/')[0];
-                                resolvedUrl = await resolvePlayer(originalUrl, playerName);
-                            }
-
-                            if (resolvedUrl) {
-                                embeds.push({ server: serverName, url: resolvedUrl });
-                            }
-                        }
-                    } catch (e) {
-                    }
-                }
-
-                if (embeds.length > 0) {
-                    return embeds;
-                } else if (i === 0) {
-                    console.log(`getAnimesailEmbeds for ${url} failed. Received HTML:`);
-                    console.log(html);
-                }
+        const embeds = [];
+        for (const stream of streams) {
+            if (stream.url && stream.url.length > 0) {
+                embeds.push({ server: stream.format, url: stream.url[0] });
             }
-        } catch (error) {
-            console.error(`Error getting Animesail embeds (attempt ${i + 1}):`, error);
         }
+        return embeds;
 
-        if (i < 2) {
-            await new Promise(resolve => setTimeout(resolve, 3000));
-        }
+    } catch (error) {
+        return [];
     }
-    return [];
 }
 
-
-export { getSamehadakuEmbeds, getAnimesailEmbeds };
+export { getSamehadakuEmbeds, getNimegamiEmbeds };

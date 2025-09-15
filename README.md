@@ -16,7 +16,7 @@ API tidak resmi yang simpel tapi powerful untuk streaming anime, mengambil data 
 - ✅ **Pencocokan Judul Cerdas:** Algoritma pencarian pintar untuk mencocokkan judul dari sumber scrape dengan data di Anilist, bahkan jika namanya sedikit berbeda (misal: "Season 2" vs "2nd Season").
 - ✅ **Pemetaan Manual Terintegrasi:** Kesalahan pencocokan dapat diperbaiki secara permanen menggunakan fitur pemetaan manual.
 - ✅ **Detail Anime Lengkap:** Info detail dari Anilist (sinopsis, genre, gambar, dll).
-- ✅ **Multi-sumber Stream:** Gak cuma satu, tapi cari link dari beberapa source (Samehadaku, Animesail).
+- ✅ **Multi-sumber Stream:** Gak cuma satu, tapi cari link dari beberapa source (Samehadaku, Nimegami).
 - ✅ **Proxy Stream:** Nonton langsung lewat API tanpa ribet, IP kamu lebih aman.
 - ✅ **Caching Cerdas:** Pakai Redis buat nge-cache data, jadi akses lebih ngebut.
 - ✅ **Dokumentasi Interaktif:** Dokumentasi lengkap dan bisa langsung dicoba pake Swagger.
@@ -288,7 +288,7 @@ Respons akan berisi informasi paginasi (`pageInfo`) dan daftar anime (`anime`).
 Proyek ini punya beberapa skrip tambahan yang bisa dijalankan via `bun run`:
 
 -   `bun run worker`: Menjalankan proses worker di latar belakang yang bertugas mengambil data dari Anilist secara perlahan.
--   `bun run scrape`: Menjalankan semua scraper (Samehadaku & Animesail) untuk mengumpulkan slug anime dan menyimpannya di Redis.
+-   `bun run scrape`: Menjalankan semua scraper (Samehadaku & Nimegami) untuk mengumpulkan slug anime dan menyimpannya di Redis.
 -   `bun run map`: Untuk memetakan Anilist ID ke slug anime secara manual jika otomatisasi gagal.
     ```bash
     # Contoh: bun run map samehadaku 153518 "bocchi-the-rock"
