@@ -486,3 +486,118 @@
 [2025-09-14T14:31:55.673Z] [Animesail] Found 4803 anime links on attempt 1.
 [2025-09-14T14:31:56.840Z] [Animesail] Successfully stored 4803 slugs in Redis.
 [2025-09-14T14:31:56.841Z] Animesail scraper finished.
+[2025-09-15T10:45:40.571Z] Starting all scrapers...
+[2025-09-15T10:45:40.573Z] Starting Animesail scraper...
+[2025-09-15T10:45:40.575Z] [Animesail] Starting scraping from https://154.26.137.28/anime/
+[2025-09-15T10:45:41.231Z] [Animesail] Cleared old data from slugs:animesail
+[2025-09-15T10:45:41.249Z] Error: [Animesail] An error occurred: axios-cookiejar-support does not support for use with other http(s).Agent.
+    at startAnimesailScraping (/home/abib/project/api/otakuin-api/src/scrapers/animesail_scraper.ts:96:25)
+    at processTicksAndRejections (native:7:39)
+[2025-09-15T10:45:41.250Z] Error: Animesail scraper failed: axios-cookiejar-support does not support for use with other http(s).Agent.
+    at scrapeAll (/home/abib/project/api/otakuin-api/src/scrapers/index.ts:14:25)
+    at processTicksAndRejections (native:7:39)
+[2025-09-15T10:45:46.251Z] Starting Samehadaku scraper...
+[2025-09-15T10:45:46.253Z] [Samehadaku] Starting scraping...
+[2025-09-15T10:45:46.326Z] [Samehadaku] Cleared old data from slugs:samehadaku
+[2025-09-15T10:45:46.328Z] [Samehadaku] Scraping page 1 from https://v1.samehadaku.how/daftar-anime-2/
+[2025-09-15T10:45:47.329Z] [Samehadaku] Found 30 anime links on page 1.
+[2025-09-15T10:45:47.433Z] [Samehadaku] Successfully stored 30 slugs from page 1 in Redis.
+[2025-09-15T10:45:48.436Z] [Samehadaku] Scraping page 2 from https://v1.samehadaku.how/daftar-anime-2/page/2/
+[2025-09-15T10:45:48.908Z] [Samehadaku] Found 30 anime links on page 2.
+[2025-09-15T10:45:49.001Z] [Samehadaku] Successfully stored 30 slugs from page 2 in Redis.
+[2025-09-15T10:45:50.002Z] [Samehadaku] Scraping page 3 from https://v1.samehadaku.how/daftar-anime-2/page/3/
+[2025-09-15T10:45:50.411Z] [Samehadaku] Found 30 anime links on page 3.
+[2025-09-15T10:45:50.502Z] [Samehadaku] Successfully stored 30 slugs from page 3 in Redis.
+[2025-09-15T10:45:51.513Z] [Samehadaku] Scraping page 4 from https://v1.samehadaku.how/daftar-anime-2/page/4/
+[2025-09-15T10:45:51.912Z] [Samehadaku] Found 30 anime links on page 4.
+[2025-09-15T10:45:51.989Z] [Samehadaku] Successfully stored 30 slugs from page 4 in Redis.
+[2025-09-15T10:45:52.990Z] [Samehadaku] Scraping page 5 from https://v1.samehadaku.how/daftar-anime-2/page/5/
+[2025-09-15T10:45:53.504Z] [Samehadaku] Found 30 anime links on page 5.
+[2025-09-15T10:45:53.600Z] [Samehadaku] Successfully stored 30 slugs from page 5 in Redis.
+[2025-09-15T10:45:54.605Z] [Samehadaku] Scraping page 6 from https://v1.samehadaku.how/daftar-anime-2/page/6/
+[2025-09-15T10:45:54.993Z] [Samehadaku] Found 30 anime links on page 6.
+[2025-09-15T10:45:55.063Z] [Samehadaku] Successfully stored 30 slugs from page 6 in Redis.
+[2025-09-15T10:45:56.064Z] [Samehadaku] Scraping page 7 from https://v1.samehadaku.how/daftar-anime-2/page/7/
+[2025-09-15T10:45:56.471Z] [Samehadaku] Found 30 anime links on page 7.
+[2025-09-15T10:45:56.548Z] [Samehadaku] Successfully stored 30 slugs from page 7 in Redis.
+[2025-09-15T10:45:57.552Z] [Samehadaku] Scraping page 8 from https://v1.samehadaku.how/daftar-anime-2/page/8/
+[2025-09-15T10:45:57.977Z] [Samehadaku] Found 30 anime links on page 8.
+[2025-09-15T10:45:58.043Z] [Samehadaku] Successfully stored 30 slugs from page 8 in Redis.
+[2025-09-15T10:45:59.044Z] [Samehadaku] Scraping page 9 from https://v1.samehadaku.how/daftar-anime-2/page/9/
+[2025-09-15T10:45:59.414Z] [Samehadaku] Found 30 anime links on page 9.
+[2025-09-15T10:45:59.497Z] [Samehadaku] Successfully stored 30 slugs from page 9 in Redis.
+[2025-09-15T10:46:00.499Z] [Samehadaku] Scraping page 10 from https://v1.samehadaku.how/daftar-anime-2/page/10/
+[2025-09-15T10:46:00.953Z] [Samehadaku] Found 30 anime links on page 10.
+[2025-09-15T10:46:01.091Z] [Samehadaku] Successfully stored 30 slugs from page 10 in Redis.
+[2025-09-15T10:46:02.093Z] [Samehadaku] Scraping page 11 from https://v1.samehadaku.how/daftar-anime-2/page/11/
+[2025-09-15T10:46:02.720Z] [Samehadaku] Found 30 anime links on page 11.
+[2025-09-15T10:46:02.796Z] [Samehadaku] Successfully stored 30 slugs from page 11 in Redis.
+[2025-09-15T10:46:03.812Z] [Samehadaku] Scraping page 12 from https://v1.samehadaku.how/daftar-anime-2/page/12/
+[2025-09-15T10:46:04.913Z] [Samehadaku] Found 30 anime links on page 12.
+[2025-09-15T10:46:04.970Z] [Samehadaku] Successfully stored 30 slugs from page 12 in Redis.
+[2025-09-15T10:46:05.971Z] [Samehadaku] Scraping page 13 from https://v1.samehadaku.how/daftar-anime-2/page/13/
+[2025-09-15T10:46:06.344Z] [Samehadaku] Found 30 anime links on page 13.
+[2025-09-15T10:46:06.399Z] [Samehadaku] Successfully stored 30 slugs from page 13 in Redis.
+[2025-09-15T10:46:07.405Z] [Samehadaku] Scraping page 14 from https://v1.samehadaku.how/daftar-anime-2/page/14/
+[2025-09-15T10:46:07.812Z] [Samehadaku] Found 30 anime links on page 14.
+[2025-09-15T10:46:07.878Z] [Samehadaku] Successfully stored 30 slugs from page 14 in Redis.
+[2025-09-15T10:46:08.879Z] [Samehadaku] Scraping page 15 from https://v1.samehadaku.how/daftar-anime-2/page/15/
+[2025-09-15T10:46:09.337Z] [Samehadaku] Found 30 anime links on page 15.
+[2025-09-15T10:46:09.389Z] [Samehadaku] Successfully stored 30 slugs from page 15 in Redis.
+[2025-09-15T10:46:10.401Z] [Samehadaku] Scraping page 16 from https://v1.samehadaku.how/daftar-anime-2/page/16/
+[2025-09-15T10:46:10.814Z] [Samehadaku] Found 30 anime links on page 16.
+[2025-09-15T10:46:10.863Z] [Samehadaku] Successfully stored 30 slugs from page 16 in Redis.
+[2025-09-15T10:46:11.875Z] [Samehadaku] Scraping page 17 from https://v1.samehadaku.how/daftar-anime-2/page/17/
+[2025-09-15T10:46:12.257Z] [Samehadaku] Found 30 anime links on page 17.
+[2025-09-15T10:46:12.328Z] [Samehadaku] Successfully stored 30 slugs from page 17 in Redis.
+[2025-09-15T10:46:13.342Z] [Samehadaku] Scraping page 18 from https://v1.samehadaku.how/daftar-anime-2/page/18/
+[2025-09-15T10:46:13.745Z] [Samehadaku] Found 30 anime links on page 18.
+[2025-09-15T10:46:13.801Z] [Samehadaku] Successfully stored 30 slugs from page 18 in Redis.
+[2025-09-15T10:46:14.825Z] [Samehadaku] Scraping page 19 from https://v1.samehadaku.how/daftar-anime-2/page/19/
+[2025-09-15T10:46:15.215Z] [Samehadaku] Found 30 anime links on page 19.
+[2025-09-15T10:46:15.296Z] [Samehadaku] Successfully stored 30 slugs from page 19 in Redis.
+[2025-09-15T10:46:16.305Z] [Samehadaku] Scraping page 20 from https://v1.samehadaku.how/daftar-anime-2/page/20/
+[2025-09-15T10:46:16.704Z] [Samehadaku] Found 30 anime links on page 20.
+[2025-09-15T10:46:16.770Z] [Samehadaku] Successfully stored 30 slugs from page 20 in Redis.
+[2025-09-15T10:46:17.771Z] [Samehadaku] Scraping page 21 from https://v1.samehadaku.how/daftar-anime-2/page/21/
+[2025-09-15T10:46:18.136Z] [Samehadaku] Found 17 anime links on page 21.
+[2025-09-15T10:46:18.203Z] [Samehadaku] Successfully stored 17 slugs from page 21 in Redis.
+[2025-09-15T10:46:19.206Z] [Samehadaku] Scraping page 22 from https://v1.samehadaku.how/daftar-anime-2/page/22/
+[2025-09-15T10:46:19.502Z] [Samehadaku] Found 0 anime links on page 22.
+[2025-09-15T10:46:19.502Z] [Samehadaku] No more anime links found. Exiting.
+[2025-09-15T10:46:19.551Z] [Samehadaku] Finished scraping. Total slugs stored: 615
+[2025-09-15T10:46:19.552Z] Samehadaku scraper finished.
+[2025-09-15T10:46:19.553Z] All scrapers finished.
+[2025-09-15T10:46:35.822Z] Starting all scrapers...
+[2025-09-15T10:46:35.825Z] Starting Animesail scraper...
+[2025-09-15T10:46:35.827Z] [Animesail] Starting scraping from https://154.26.137.28/anime/
+[2025-09-15T10:46:41.689Z] [Animesail] Cleared old data from slugs:animesail
+[2025-09-15T10:46:41.704Z] Error: [Animesail] An error occurred: axios-cookiejar-support does not support for use with other http(s).Agent.
+    at startAnimesailScraping (/home/abib/project/api/otakuin-api/src/scrapers/animesail_scraper.ts:96:25)
+    at processTicksAndRejections (native:7:39)
+[2025-09-15T10:46:41.704Z] Error: Animesail scraper failed: axios-cookiejar-support does not support for use with other http(s).Agent.
+    at scrapeAll (/home/abib/project/api/otakuin-api/src/scrapers/index.ts:14:25)
+    at processTicksAndRejections (native:7:39)
+[2025-09-15T10:48:17.100Z] Starting all scrapers...
+[2025-09-15T10:48:17.102Z] Starting Animesail scraper...
+[2025-09-15T10:48:17.104Z] [Animesail] Starting scraping from https://154.26.137.28/anime/
+[2025-09-15T10:48:17.744Z] [Animesail] Cleared old data from slugs:animesail
+[2025-09-15T10:48:18.106Z] [Animesail] Found 0 anime links on attempt 1.
+[2025-09-15T10:48:18.106Z] [Animesail] No links found, retrying in 3 seconds...
+[2025-09-15T10:48:21.214Z] [Animesail] Found 0 anime links on attempt 2.
+[2025-09-15T10:48:21.218Z] [Animesail] No links found, retrying in 3 seconds...
+[2025-09-15T10:53:38.350Z] Starting all scrapers...
+[2025-09-15T10:53:38.352Z] Starting Animesail scraper...
+[2025-09-15T10:53:38.354Z] [Animesail] Starting scraping from https://154.26.137.28/anime/
+[2025-09-15T10:53:39.290Z] [Animesail] Cleared old data from slugs:animesail
+[2025-09-15T10:53:39.473Z] [Animesail] Found 0 anime links on attempt 1.
+[2025-09-15T10:53:39.474Z] [Animesail] No links found, retrying in 3 seconds...
+[2025-09-15T10:53:43.052Z] [Animesail] Found 0 anime links on attempt 2.
+[2025-09-15T10:53:43.053Z] [Animesail] No links found, retrying in 3 seconds...
+[2025-09-15T10:56:52.525Z] Starting all scrapers...
+[2025-09-15T10:56:52.526Z] Starting Animesail scraper...
+[2025-09-15T10:56:52.528Z] [Animesail] Starting scraping from https://154.26.137.28/anime/
+[2025-09-15T10:56:53.446Z] [Animesail] Cleared old data from slugs:animesail
+[2025-09-15T10:56:54.176Z] [Animesail] Found 4804 anime links on attempt 1.
+[2025-09-15T10:56:55.294Z] [Animesail] Successfully stored 4804 slugs in Redis.
+[2025-09-15T10:56:55.294Z] Animesail scraper finished.

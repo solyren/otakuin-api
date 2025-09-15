@@ -4,6 +4,18 @@ import { Agent } from 'https';
 import { setGlobalDispatcher } from 'undici';
 import axios from 'axios';
 import https from 'https';
+import { wrapper } from 'axios-cookiejar-support';
+import { CookieJar } from 'tough-cookie';
+
+const userAgents = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+];
+
+const getRandomUserAgent = () => userAgents[Math.floor(Math.random() * userAgents.length)];
 
 const agent = new Agent({
     connect: {
@@ -13,12 +25,9 @@ const agent = new Agent({
 
 setGlobalDispatcher(agent);
 
-const FAKE_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36';
-
 const animesailFetchOptions = {
     headers: {
-        'User-Agent': FAKE_USER_AGENT,
-        'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=ID'
+        'User-Agent': getRandomUserAgent(),
     }
 };
 
@@ -28,15 +37,14 @@ async function resolvePlayer(url: string, playerName: string): Promise<string | 
         try {
             const response = await axios.get(url, {
                 headers: {
-                    'User-Agent': FAKE_USER_AGENT,
+                    'User-Agent': getRandomUserAgent(),
                     'Referer': url,
-                    'Cookie': '_as_ipin_tz=UTC; _as_ipin_lc=en-US; _as_ipin_ct=SG',
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                    'Accept-Language': 'en-US,en;q=0.9'
-                },
-                httpsAgent: new https.Agent({
-                    rejectUnauthorized: false
-                })
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive',
+                    'Cookie': '_as_ipin_ct=ID; _as_ipin_tz=UTC; _as_ipin_lc=en-US'
+                }
             });
 
             if (response.status === 200) {
@@ -126,14 +134,13 @@ async function getAnimesailEmbeds(url: string): Promise<any[]> {
         try {
             const response = await axios.get(url, {
                 headers: {
-                    'User-Agent': FAKE_USER_AGENT,
-                    'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=SG',
+                    'User-Agent': getRandomUserAgent(),
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                    'Accept-Language': 'en-US,en;q=0.9'
-                },
-                httpsAgent: new https.Agent({
-                    rejectUnauthorized: false
-                })
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive',
+                    'Cookie': '_as_ipin_ct=ID; _as_ipin_tz=UTC; _as_ipin_lc=en-US'
+                }
             });
 
             if (response.status === 200) {

@@ -3,6 +3,19 @@ import { redis } from '../lib/redis';
 import { logger, errorLogger } from '../lib/logger';
 import axios from 'axios';
 import https from 'https';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import { wrapper } from 'axios-cookiejar-support';
+import { CookieJar } from 'tough-cookie';
+
+const userAgents = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+];
+
+const getRandomUserAgent = () => userAgents[Math.floor(Math.random() * userAgents.length)];
 
 const BASE_URL = `${process.env.ANIMESAIL_BASE_URL}/anime/`;
 const SOURCE_KEY = 'slugs:animesail';
@@ -13,17 +26,19 @@ export async function startAnimesailScraping() {
     logger(`[Animesail] Starting scraping from ${url}`);
 
     try {
+        const proxy = process.env.PROXY_URL;
+        const agent = proxy ? new HttpsProxyAgent(proxy) : new https.Agent({ rejectUnauthorized: false });
+
         const axiosConfig: any = {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
-                'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=SG',
+                'User-Agent': getRandomUserAgent(),
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
                 'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': url
-            },
-            httpsAgent: new https.Agent({
-                rejectUnauthorized: false
-            })
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Referer': url,
+                'Cookie': '_as_ipin_ct=ID; _as_ipin_tz=UTC; _as_ipin_lc=en-US'
+            }
         };
 
         await redis.del(SOURCE_KEY);
