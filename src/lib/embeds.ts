@@ -4,6 +4,7 @@ import { Agent } from 'https';
 import { setGlobalDispatcher } from 'undici';
 import axios from 'axios';
 import https from 'https';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
 
@@ -33,22 +34,23 @@ const animesailFetchOptions = {
 
 // --- Resolve Player ---
 async function resolvePlayer(url: string, playerName: string): Promise<string | null> {
+    const proxy = process.env.PROXY_URL;
+    const agent = proxy ? new HttpsProxyAgent(proxy) : new https.Agent({ rejectUnauthorized: false });
+
+    const axiosConfig: any = {
+        httpsAgent: agent,
+        headers: {
+            'User-Agent': getRandomUserAgent(),
+            'Referer': url, // Referer should be the player page itself
+            'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=ID', // Hardcode country to ID
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Language': 'en-US,en;q=0.9'
+        }
+    };
+
     for (let i = 0; i < 3; i++) {
         try {
-            const initialResponse = await axios.get(url, { headers: { 'User-Agent': getRandomUserAgent() } });
-            const countryCode = initialResponse.headers['x-local'] || 'ID';
-
-            const response = await axios.get(url, {
-                headers: {
-                    'User-Agent': getRandomUserAgent(),
-                    'Referer': url,
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'Connection': 'keep-alive',
-                    'Cookie': `_as_ipin_ct=${countryCode}; _as_ipin_tz=UTC; _as_ipin_lc=en-US`
-                }
-            });
+            const response = await axios.get(url, axiosConfig);
 
             if (response.status === 200) {
                 const html = response.data;
@@ -133,21 +135,23 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
 
 // --- Get Animesail Embeds ---
 async function getAnimesailEmbeds(url: string): Promise<any[]> {
+    const proxy = process.env.PROXY_URL;
+    const agent = proxy ? new HttpsProxyAgent(proxy) : new https.Agent({ rejectUnauthorized: false });
+
+    const axiosConfig: any = {
+        httpsAgent: agent,
+        headers: {
+            'User-Agent': getRandomUserAgent(),
+            'Cookie': '_as_ipin_tz=UTC;_as_ipin_lc=en-US;_as_ipin_ct=ID', // Hardcode country to ID
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': process.env.ANIMESAIL_BASE_URL
+        }
+    };
+
     for (let i = 0; i < 3; i++) {
         try {
-            const initialResponse = await axios.get(url, { headers: { 'User-Agent': getRandomUserAgent() } });
-            const countryCode = initialResponse.headers['x-local'] || 'ID';
-
-            const response = await axios.get(url, {
-                headers: {
-                    'User-Agent': getRandomUserAgent(),
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'Connection': 'keep-alive',
-                    'Cookie': `_as_ipin_ct=${countryCode}; _as_ipin_tz=UTC; _as_ipin_lc=en-US`
-                }
-            });
+            const response = await axios.get(url, axiosConfig);
 
             if (response.status === 200) {
                 const html = response.data;
