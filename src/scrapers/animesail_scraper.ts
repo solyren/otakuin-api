@@ -29,6 +29,10 @@ export async function startAnimesailScraping() {
         const proxy = process.env.PROXY_URL;
         const agent = proxy ? new HttpsProxyAgent(proxy) : new https.Agent({ rejectUnauthorized: false });
 
+        const initialResponse = await axios.get(url, { headers: { 'User-Agent': getRandomUserAgent() } });
+        const countryCode = initialResponse.headers['x-local'] || 'ID';
+        logger(`[Animesail] Detected country code: ${countryCode}`);
+
         const axiosConfig: any = {
             headers: {
                 'User-Agent': getRandomUserAgent(),
@@ -37,7 +41,7 @@ export async function startAnimesailScraping() {
                 'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
                 'Referer': url,
-                'Cookie': '_as_ipin_ct=ID; _as_ipin_tz=UTC; _as_ipin_lc=en-US'
+                'Cookie': `_as_ipin_ct=${countryCode}; _as_ipin_tz=UTC; _as_ipin_lc=en-US`
             }
         };
 

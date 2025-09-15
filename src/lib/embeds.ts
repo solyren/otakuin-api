@@ -35,6 +35,9 @@ const animesailFetchOptions = {
 async function resolvePlayer(url: string, playerName: string): Promise<string | null> {
     for (let i = 0; i < 3; i++) {
         try {
+            const initialResponse = await axios.get(url, { headers: { 'User-Agent': getRandomUserAgent() } });
+            const countryCode = initialResponse.headers['x-local'] || 'ID';
+
             const response = await axios.get(url, {
                 headers: {
                     'User-Agent': getRandomUserAgent(),
@@ -43,7 +46,7 @@ async function resolvePlayer(url: string, playerName: string): Promise<string | 
                     'Accept-Language': 'en-US,en;q=0.9',
                     'Accept-Encoding': 'gzip, deflate, br',
                     'Connection': 'keep-alive',
-                    'Cookie': '_as_ipin_ct=ID; _as_ipin_tz=UTC; _as_ipin_lc=en-US'
+                    'Cookie': `_as_ipin_ct=${countryCode}; _as_ipin_tz=UTC; _as_ipin_lc=en-US`
                 }
             });
 
@@ -132,6 +135,9 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
 async function getAnimesailEmbeds(url: string): Promise<any[]> {
     for (let i = 0; i < 3; i++) {
         try {
+            const initialResponse = await axios.get(url, { headers: { 'User-Agent': getRandomUserAgent() } });
+            const countryCode = initialResponse.headers['x-local'] || 'ID';
+
             const response = await axios.get(url, {
                 headers: {
                     'User-Agent': getRandomUserAgent(),
@@ -139,7 +145,7 @@ async function getAnimesailEmbeds(url: string): Promise<any[]> {
                     'Accept-Language': 'en-US,en;q=0.9',
                     'Accept-Encoding': 'gzip, deflate, br',
                     'Connection': 'keep-alive',
-                    'Cookie': '_as_ipin_ct=ID; _as_ipin_tz=UTC; _as_ipin_lc=en-US'
+                    'Cookie': `_as_ipin_ct=${countryCode}; _as_ipin_tz=UTC; _as_ipin_lc=en-US`
                 }
             });
 
