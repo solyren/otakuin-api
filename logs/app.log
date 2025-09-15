@@ -601,3 +601,11 @@
 [2025-09-15T10:56:54.176Z] [Animesail] Found 4804 anime links on attempt 1.
 [2025-09-15T10:56:55.294Z] [Animesail] Successfully stored 4804 slugs in Redis.
 [2025-09-15T10:56:55.294Z] Animesail scraper finished.
+[2025-09-15T11:04:02.908Z] Starting all scrapers...
+[2025-09-15T11:04:02.910Z] Starting Animesail scraper...
+[2025-09-15T11:04:02.911Z] [Animesail] Starting scraping from https://154.26.137.28/anime/
+[2025-09-15T11:04:03.065Z] [Animesail] Detected country code: ID
+[2025-09-15T11:04:03.900Z] [Animesail] Cleared old data from slugs:animesail
+[2025-09-15T11:04:04.554Z] [Animesail] Found 4804 anime links on attempt 1.
+[2025-09-15T11:04:05.695Z] [Animesail] Successfully stored 4804 slugs in Redis.
+[2025-09-15T11:04:05.696Z] Animesail scraper finished.

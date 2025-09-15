@@ -29,11 +29,11 @@ export async function startAnimesailScraping() {
         const proxy = process.env.PROXY_URL;
         const agent = proxy ? new HttpsProxyAgent(proxy) : new https.Agent({ rejectUnauthorized: false });
 
-        const initialResponse = await axios.get(url, { headers: { 'User-Agent': getRandomUserAgent() } });
-        const countryCode = initialResponse.headers['x-local'] || 'ID';
-        logger(`[Animesail] Detected country code: ${countryCode}`);
+        const countryCode = 'ID'; // Hardcode country to Indonesia
+        logger(`[Animesail] Using country code: ${countryCode}`);
 
         const axiosConfig: any = {
+            httpsAgent: agent,
             headers: {
                 'User-Agent': getRandomUserAgent(),
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
