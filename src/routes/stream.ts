@@ -315,6 +315,54 @@ const getKrakenfilesStream = async (url: string) => {
     throw new Error('No stream URL found on Krakenfiles page');
 };
 
+// --- Get DlBerkasDrive Stream (for Nimegami) ---
+const getDlBerkasDriveStream = async (url: string, server?: string) => {
+    const cacheKey = `${STREAM_DATA_CACHE_PREFIX}${url}`;
+
+    const cachedResult: any = await redis.get(cacheKey);
+    if (cachedResult) {
+        return cachedResult;
+    }
+
+    const response = await fetch(url, { headers: { 'User-Agent': FAKE_USER_AGENT } });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch DlBerkasDrive page. Status: ${response.status}`);
+    }
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    let videoSource = '';
+    
+    // Jika parameter server diberikan, cari URL video untuk server tersebut
+    if (server) {
+        const serverElement = $(`.daftar_server li[server="${server}"]`);
+        if (serverElement.length > 0) {
+            videoSource = serverElement.attr('data-url') || '';
+        }
+    }
+    
+    // Jika tidak ada server yang ditentukan atau tidak ditemukan, gunakan yang aktif
+    if (!videoSource) {
+        const activeServerElement = $('.daftar_server li.active');
+        if (activeServerElement.length > 0) {
+            videoSource = activeServerElement.attr('data-url') || '';
+        }
+    }
+    
+    // Jika masih tidak ditemukan, coba ambil dari source video
+    if (!videoSource) {
+        videoSource = $('video#player source').attr('src') || '';
+    }
+
+    if (videoSource) {
+        const result = { url: videoSource, type: 'mp4' };
+        await redis.set(cacheKey, result, { ex: STREAM_DATA_EXPIRATION_SECONDS });
+        return result;
+    }
+
+    throw new Error('No stream URL found on DlBerkasDrive page');
+};
+
 // --- Stream Route ---
 export const stream = new Elysia()
     .get('/anime/stream/:id', async ({ params, set, request, ip }) => {
@@ -430,6 +478,17 @@ export const stream = new Elysia()
             } else if (streamUrl.includes('mp4upload.com')) {
                 const mp4uploadResult = await getMp4uploadStream(streamUrl);
                 return genericProxyHandler(mp4uploadResult.url, streamUrl);
+            } else if (streamUrl.includes('dl.berkasdrive.com')) {
+                // Parse URL untuk mendapatkan parameter server jika ada
+                const urlObj = new URL(streamUrl);
+                const serverParam = urlObj.searchParams.get('server') || undefined;
+                
+                // Hapus parameter server dari URL untuk mendapatkan URL dasar
+                urlObj.searchParams.delete('server');
+                const baseUrl = urlObj.toString();
+                
+                const dlBerkasResult = await getDlBerkasDriveStream(baseUrl, serverParam);
+                return genericProxyHandler(dlBerkasResult.url, baseUrl);
             } else if (streamUrl.includes('tsukasa.my.id') || streamUrl.includes('googleapis.com') || streamUrl.includes('dropbox.com') || streamUrl.includes('vidcache.net')) {
                 const videoUrl = streamUrl.includes('dropbox.com') ? streamUrl.replace(/&dl=1$/, '&raw=1') : streamUrl;
                 const referer = streamUrl.includes('dropbox.com') ? process.env.ANIMESAIL_BASE_URL : undefined;

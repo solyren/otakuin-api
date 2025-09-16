@@ -125,6 +125,57 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
     }
 }
 
+// --- Get DlBerkasDrive Servers ---
+async function getDlBerkasDriveServers(baseUrl: string, resolution: string, useResolutionOnly: boolean = false): Promise<any[]> {
+    try {
+        // Tambahkan penanganan untuk URL yang mungkin sudah memiliki parameter
+        const urlObj = new URL(baseUrl);
+        // Hapus parameter server jika ada
+        urlObj.searchParams.delete('server');
+        const cleanUrl = urlObj.toString();
+        
+        const response = await fetch(cleanUrl, { 
+            headers: { 
+                'User-Agent': getRandomUserAgent() 
+            } 
+        });
+        if (!response.ok) {
+            return [];
+        }
+        const html = await response.text();
+        const $ = cheerio.load(html);
+
+        const servers = [];
+        $('.daftar_server li').each((i, el) => {
+            const serverElement = $(el);
+            const serverNumber = serverElement.attr('server');
+            
+            if (serverNumber) {
+                const serverUrl = `${cleanUrl}&server=${serverNumber}`;
+                
+                let serverName;
+                if (useResolutionOnly) {
+                    // Untuk nimegami, tampilkan resolusi + nomor server
+                    serverName = `${resolution} server ${serverNumber}`;
+                } else {
+                    // Format nama server: "dlberkas {resolusi} server {nomor}"
+                    serverName = `dlberkas ${resolution} server ${serverNumber}`;
+                }
+                
+                servers.push({ 
+                    server: serverName, 
+                    url: serverUrl 
+                });
+            }
+        });
+
+        return servers;
+    } catch (error) {
+        console.error('Error getting DlBerkasDrive servers:', error);
+        return [];
+    }
+}
+
 // --- Get Nimegami Embeds ---
 async function getNimegamiEmbeds(data: string): Promise<any[]> {
     try {
@@ -134,12 +185,21 @@ async function getNimegamiEmbeds(data: string): Promise<any[]> {
         const embeds = [];
         for (const stream of streams) {
             if (stream.url && stream.url.length > 0) {
-                embeds.push({ server: stream.format, url: stream.url[0] });
+                const baseUrl = stream.url[0];
+                
+                // Jika URL berasal dari dl.berkasdrive.com, kita perlu mem-parsing server-servernya
+                if (baseUrl.includes('dl.berkasdrive.com')) {
+                    const dlBerkasServers = await getDlBerkasDriveServers(baseUrl, stream.format); // Selalu sertakan info server
+                    embeds.push(...dlBerkasServers);
+                } else {
+                    embeds.push({ server: stream.format, url: baseUrl });
+                }
             }
         }
         return embeds;
 
     } catch (error) {
+        console.error('Error in getNimegamiEmbeds:', error);
         return [];
     }
 }

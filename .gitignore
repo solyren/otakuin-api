@@ -3,3 +3,4 @@ node_modules
 bun.lockb
 .env
 GEMINI.md
+QWEN.md
