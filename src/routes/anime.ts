@@ -42,9 +42,6 @@ const findBestMatch = (animeDetails: any, slugList: { title: string; slug: strin
                 });
 
                 const bestMatchResult = searchResult[0];
-                if (bestMatchResult.score > 0.1) {
-                    return null;
-                }
 
                 const bestMatch = bestMatchResult.item;
                 return {
@@ -94,8 +91,19 @@ const getSamehadakuEpisodeList = async (id: number, animeDetails: any) => {
     const response = await fetch(samehadakuUrl, { redirect: 'follow' });
 
     const finalUrl = response.url;
-    if (!finalUrl.includes(samehadakuSlug)) {
-        console.log(`Redirect detected for slug ${samehadakuSlug}. Expected ${samehadakuUrl}, got ${finalUrl}.`);
+    const extractAnimeSlug = (url: string) => {
+        try {
+            return new URL(url).pathname.split('/').filter(Boolean).pop() || '';
+        } catch (e) {
+            return '';
+        }
+    };
+
+    const originalSlugPart = extractAnimeSlug(samehadakuUrl);
+    const finalSlugPart = extractAnimeSlug(finalUrl);
+
+    if (originalSlugPart && finalSlugPart && originalSlugPart !== finalSlugPart) {
+        console.log(`Redirect detected for slug ${samehadakuSlug}. Expected slug part ${originalSlugPart}, got ${finalSlugPart}.`);
         return [];
     }
 
@@ -150,8 +158,19 @@ const getNimegamiEpisodeList = async (id: number, animeDetails: any) => {
     const response = await fetch(nimegamiUrl, { redirect: 'follow' });
 
     const finalUrl = response.url;
-    if (!finalUrl.includes(nimegamiSlug)) {
-        console.log(`Redirect detected for slug ${nimegamiSlug}. Expected ${nimegamiUrl}, got ${finalUrl}.`);
+    const extractAnimeSlug = (url: string) => {
+        try {
+            return new URL(url).pathname.split('/').filter(Boolean).pop() || '';
+        } catch (e) {
+            return '';
+        }
+    };
+
+    const originalSlugPart = extractAnimeSlug(nimegamiUrl);
+    const finalSlugPart = extractAnimeSlug(finalUrl);
+
+    if (originalSlugPart && finalSlugPart && originalSlugPart !== finalSlugPart) {
+        console.log(`Redirect detected for slug ${nimegamiSlug}. Expected slug part ${originalSlugPart}, got ${finalSlugPart}.`);
         return [];
     }
 

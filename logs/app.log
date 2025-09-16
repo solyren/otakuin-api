@@ -744,3 +744,10 @@
     at listen (/home/abib/project/api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
     at <anonymous> (/home/abib/project/api/otakuin-api/src/main.ts:16:9)
     at processTicksAndRejections (unknown:7:39)
+[2025-09-16T12:28:44.433Z] [Request] GET http://localhost:3000/api/home
+[2025-09-16T12:29:06.483Z] [Request] GET http://localhost:3000/api/anime/184237
+[2025-09-16T12:29:39.736Z] [Request] GET http://localhost:3000/api/anime/178433
+[2025-09-16T12:32:08.577Z] [Request] GET http://localhost:3000/api/anime/178433
+[2025-09-16T12:33:02.443Z] [Request] GET http://localhost:3000/api/anime/184237
+[2025-09-16T12:34:46.581Z] [Request] GET http://localhost:3000/api/anime/184237
+[2025-09-16T12:35:36.130Z] [Request] GET http://localhost:3000/api/anime/184237/episode/11
