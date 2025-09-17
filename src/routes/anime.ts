@@ -8,7 +8,39 @@ import { getAnilistDataById, normalizeSlug } from '../lib/anilist';
 import axios from 'axios';
 import https from 'https';
 
-// --- Find Best Match ---
+// -- Calculate Similarity --
+const calculateSimilarity = (str1: string, str2: string): number => {
+    const clean1 = str1.toLowerCase().replace(/\s+/g, ' ').trim();
+    const clean2 = str2.toLowerCase().replace(/\s+/g, ' ').trim();
+    
+    if (clean1.includes(clean2) || clean2.includes(clean1)) {
+        return 0.8;
+    }
+    
+    const len1 = clean1.length;
+    const len2 = clean2.length;
+    const matrix: number[][] = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(null));
+    
+    for (let i = 0; i <= len1; i++) matrix[i][0] = i;
+    for (let j = 0; j <= len2; j++) matrix[0][j] = j;
+    
+    for (let i = 1; i <= len1; i++) {
+        for (let j = 1; j <= len2; j++) {
+            const cost = clean1[i - 1] === clean2[j - 1] ? 0 : 1;
+            matrix[i][j] = Math.min(
+                matrix[i - 1][j] + 1,
+                matrix[i][j - 1] + 1,
+                matrix[i - 1][j - 1] + cost
+            );
+        }
+    }
+    
+    const distance = matrix[len1][len2];
+    const maxLength = Math.max(len1, len2);
+    return 1 - (distance / maxLength);
+};
+
+// -- Find Best Match --
 const findBestMatch = (animeDetails: any, slugList: { title: string; slug: string }[]) => {
     if (!slugList || slugList.length === 0) return null;
 
@@ -17,11 +49,10 @@ const findBestMatch = (animeDetails: any, slugList: { title: string; slug: strin
         normalizedTitle: normalizeSlug(item.slug)
     }));
 
-
     const fuse = new Fuse(normalizedSlugList, {
-        keys: ['normalizedTitle'],
+        keys: ['normalizedTitle', 'title'],
         includeScore: true,
-        threshold: 0.4,
+        threshold: 0.6,
     });
 
     const titlesToSearch = [
@@ -30,29 +61,74 @@ const findBestMatch = (animeDetails: any, slugList: { title: string; slug: strin
         { source: 'native', title: animeDetails.title.native },
     ];
 
+    let bestMatch: any = null;
+    let bestScore = 0;
+
     for (const search of titlesToSearch) {
         if (search.title) {
             const searchResult = fuse.search(search.title);
             if (searchResult.length > 0) {
-                searchResult.sort((a, b) => {
-                    if (a.score !== b.score) {
-                        return a.score - b.score;
-                    }
-                    return a.item.title.length - b.item.title.length;
-                });
-
-                const bestMatchResult = searchResult[0];
-
-                const bestMatch = bestMatchResult.item;
-                return {
-                    found_slug: bestMatch.slug,
-                    found_slug_title: bestMatch.title,
-                    match_method: search.source,
-                };
+                const topResult = searchResult[0];
+                if (topResult.score !== undefined && (1 - topResult.score) > bestScore) {
+                    bestScore = 1 - topResult.score;
+                    bestMatch = {
+                        found_slug: topResult.item.slug,
+                        found_slug_title: topResult.item.title,
+                        match_method: search.source,
+                    };
+                }
             }
         }
     }
-    return null;
+    
+    if (bestScore < 0.7) {
+        for (const search of titlesToSearch) {
+            if (search.title) {
+                for (const item of normalizedSlugList) {
+                    const similarity = calculateSimilarity(search.title, item.title);
+                    if (similarity > bestScore && similarity > 0.5) {
+                        bestScore = similarity;
+                        bestMatch = {
+                            found_slug: item.slug,
+                            found_slug_title: item.title,
+                            match_method: 'character_similarity',
+                        };
+                    }
+                }
+            }
+        }
+    }
+    
+    if (bestScore < 0.7 && animeDetails.title && typeof animeDetails.title === 'string') {
+        const searchResult = fuse.search(animeDetails.title);
+        if (searchResult.length > 0) {
+            const topResult = searchResult[0];
+            if (topResult.score !== undefined && (1 - topResult.score) > bestScore) {
+                bestScore = 1 - topResult.score;
+                bestMatch = {
+                    found_slug: topResult.item.slug,
+                    found_slug_title: topResult.item.title,
+                    match_method: 'home_title',
+                };
+            }
+        }
+        
+        if (bestScore < 0.7) {
+            for (const item of normalizedSlugList) {
+                const similarity = calculateSimilarity(animeDetails.title, item.title);
+                if (similarity > bestScore && similarity > 0.5) {
+                    bestScore = similarity;
+                    bestMatch = {
+                        found_slug: item.slug,
+                        found_slug_title: item.title,
+                        match_method: 'home_character_similarity',
+                    };
+                }
+            }
+        }
+    }
+    
+    return bestMatch;
 };
 
 const SLUGS_KEY = 'slugs:samehadaku';
@@ -66,25 +142,52 @@ const EPISODE_CACHE_EXPIRATION_SECONDS = 7200;
 const EPISODE_LIST_CACHE_KEY_PREFIX = 'episode_list:';
 const EPISODE_LIST_CACHE_EXPIRATION_SECONDS = 300;
 
-// --- Get Samehadaku Episode List ---
+// -- Get Samehadaku Episode List --
 const getSamehadakuEpisodeList = async (id: number, animeDetails: any) => {
-    const samehadakuSlugsData = await redis.hgetall(SLUGS_KEY);
+    const [samehadakuSlugsData, homeCache] = await Promise.all([
+        redis.hgetall(SLUGS_KEY),
+        redis.get('home:anime_list')
+    ]);
+    
     const samehadakuManualSlug = await redis.hget(getManualMapKey('samehadaku'), id.toString());
 
     let samehadakuSlug: string | null = null;
+    let matchInfo: any = null;
+    
     if (samehadakuManualSlug) {
         samehadakuSlug = samehadakuManualSlug as string;
+        matchInfo = { found_slug: samehadakuSlug, match_method: 'manual' };
     } else if (samehadakuSlugsData) {
         const samehadakuSlugList = Object.entries(samehadakuSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
         const match = findBestMatch(animeDetails, samehadakuSlugList);
         if (match) {
             samehadakuSlug = match.found_slug;
+            matchInfo = match;
+        } else {
+            if (homeCache) {
+                try {
+                    const homeList = typeof homeCache === 'string' ? JSON.parse(homeCache) : homeCache;
+                    const animeInHome = homeList.find((item: any) => item.id === id);
+                    if (animeInHome && animeInHome.title) {
+                        const animeWithHomeTitle = { ...animeDetails, title: animeInHome.title };
+                        const match = findBestMatch(animeWithHomeTitle, samehadakuSlugList);
+                        if (match) {
+                            samehadakuSlug = match.found_slug;
+                            matchInfo = { ...match, match_method: 'home_cache' };
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing home cache:', e);
+                }
+            }
         }
     }
 
     if (!samehadakuSlug) {
         return [];
     }
+
+    console.log(`[Samehadaku] Found slug for anime ID ${id}: ${samehadakuSlug} (matched via ${matchInfo?.match_method || 'unknown'})`);
 
     const samehadakuUrl = samehadakuSlug.startsWith('http') ? samehadakuSlug : `${process.env.SAMEHADAKU_BASE_URL}/anime${samehadakuSlug.startsWith('/') ? '' : '/'}${samehadakuSlug}`;
 
@@ -133,25 +236,52 @@ const getSamehadakuEpisodeList = async (id: number, animeDetails: any) => {
     return episodeList.sort((a, b) => b.episode - a.episode);
 }
 
-// --- Get Nimegami Episode List ---
+// -- Get Nimegami Episode List --
 const getNimegamiEpisodeList = async (id: number, animeDetails: any) => {
-    const nimegamiSlugsData = await redis.hgetall(NIMEGAMI_SLUGS_KEY);
+    const [nimegamiSlugsData, homeCache] = await Promise.all([
+        redis.hgetall(NIMEGAMI_SLUGS_KEY),
+        redis.get('home:anime_list')
+    ]);
+    
     const nimegamiManualSlug = await redis.hget(getManualMapKey('nimegami'), id.toString());
 
     let nimegamiSlug: string | null = null;
+    let matchInfo: any = null;
+    
     if (nimegamiManualSlug) {
         nimegamiSlug = nimegamiManualSlug as string;
+        matchInfo = { found_slug: nimegamiSlug, match_method: 'manual' };
     } else if (nimegamiSlugsData) {
         const nimegamiSlugList = Object.entries(nimegamiSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
         const match = findBestMatch(animeDetails, nimegamiSlugList);
         if (match) {
             nimegamiSlug = match.found_slug;
+            matchInfo = match;
+        } else {
+            if (homeCache) {
+                try {
+                    const homeList = typeof homeCache === 'string' ? JSON.parse(homeCache) : homeCache;
+                    const animeInHome = homeList.find((item: any) => item.id === id);
+                    if (animeInHome && animeInHome.title) {
+                        const animeWithHomeTitle = { ...animeDetails, title: animeInHome.title };
+                        const match = findBestMatch(animeWithHomeTitle, nimegamiSlugList);
+                        if (match) {
+                            nimegamiSlug = match.found_slug;
+                            matchInfo = { ...match, match_method: 'home_cache' };
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing home cache:', e);
+                }
+            }
         }
     }
 
     if (!nimegamiSlug) {
         return [];
     }
+
+    console.log(`[Nimegami] Found slug for anime ID ${id}: ${nimegamiSlug} (matched via ${matchInfo?.match_method || 'unknown'})`);
 
     const nimegamiUrl = `${process.env.NIMEGAMI_BASE_URL}/${nimegamiSlug}`;
 
@@ -196,9 +326,7 @@ const getNimegamiEpisodeList = async (id: number, animeDetails: any) => {
     return episodeList.sort((a, b) => b.episode - a.episode);
 }
 
-
-
-// --- Format Episode Slug ---
+// -- Format Episode Slug --
 const formatEpisodeSlug = (domain: string, pathSlug: string, episode: number) => {
     let baseUrl = domain;
     let cleanedPath = pathSlug;
@@ -213,9 +341,7 @@ const formatEpisodeSlug = (domain: string, pathSlug: string, episode: number) =>
     return `${baseUrl}/${cleanedPath}-episode-${episode}/`;
 };
 
-
-
-// --- Generate Stream Ids ---
+// -- Generate Stream Ids --
 const generateStreamIds = async (embeds: any[]): Promise<any[]> => {
     if (!embeds || embeds.length === 0) {
         return [];
@@ -264,8 +390,6 @@ export const anime = new Elysia({ prefix: '/anime' })
             if (!episodeList || episodeList.length === 0) {
                 episodeList = await getNimegamiEpisodeList(id, animeDetails);
             }
-
-            
 
             if (episodeList.length > 0) {
                 await redis.set(episodeCacheKey, episodeList, { ex: EPISODE_LIST_CACHE_EXPIRATION_SECONDS });
@@ -318,15 +442,28 @@ export const anime = new Elysia({ prefix: '/anime' })
             return { error: 'Anime not found on Anilist' };
         }
 
-        const [samehadakuSlugsData, nimegamiSlugsData, samehadakuManualSlug, nimegamiManualSlug] = await Promise.all([
+        const [samehadakuSlugsData, nimegamiSlugsData, samehadakuManualSlug, nimegamiManualSlug, homeCache] = await Promise.all([
             redis.hgetall(SLUGS_KEY),
             redis.hgetall(NIMEGAMI_SLUGS_KEY),
             redis.hget(getManualMapKey('samehadaku'), id.toString()),
-            redis.hget(getManualMapKey('nimegami'), id.toString())
+            redis.hget(getManualMapKey('nimegami'), id.toString()),
+            redis.get('home:anime_list')
         ]);
 
         const samehadakuInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
         const nimegamiInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
+
+        const getAnimeTitleFromHomeCache = (animeId: number) => {
+            if (!homeCache) return null;
+            try {
+                const homeList = typeof homeCache === 'string' ? JSON.parse(homeCache) : homeCache;
+                const animeInHome = homeList.find((item: any) => item.id === animeId);
+                return animeInHome ? animeInHome.title : null;
+            } catch (e) {
+                console.error('Error parsing home cache:', e);
+                return null;
+            }
+        };
 
         if (samehadakuManualSlug) {
             samehadakuInfo.found_slug = samehadakuManualSlug as string;
@@ -341,6 +478,19 @@ export const anime = new Elysia({ prefix: '/anime' })
                 samehadakuInfo.found_slug_title = match.found_slug_title;
                 samehadakuInfo.match_method = match.match_method;
                 samehadakuInfo.episode_url = formatEpisodeSlug(process.env.SAMEHADAKU_BASE_URL, match.found_slug, episode);
+            } else {
+                const homeTitle = getAnimeTitleFromHomeCache(id);
+                if (homeTitle) {
+                    const animeWithHomeTitle = { ...animeDetails, title: homeTitle };
+                    const match = findBestMatch(animeWithHomeTitle, samehadakuSlugList);
+                    if (match) {
+                        samehadakuInfo.found_slug = match.found_slug;
+                        samehadakuInfo.found_slug_title = match.found_slug_title;
+                        samehadakuInfo.match_method = 'home_cache';
+                        samehadakuInfo.episode_url = formatEpisodeSlug(process.env.SAMEHADAKU_BASE_URL, match.found_slug, episode);
+                        console.log(`[Episode Route] Found Samehadaku slug using home cache title for anime ID ${id}`);
+                    }
+                }
             }
         }
 
@@ -357,6 +507,19 @@ export const anime = new Elysia({ prefix: '/anime' })
                 nimegamiInfo.found_slug_title = match.found_slug_title;
                 nimegamiInfo.match_method = match.match_method;
                 nimegamiInfo.episode_url = `${process.env.NIMEGAMI_BASE_URL}/${match.found_slug}`;
+            } else {
+                const homeTitle = getAnimeTitleFromHomeCache(id);
+                if (homeTitle) {
+                    const animeWithHomeTitle = { ...animeDetails, title: homeTitle };
+                    const match = findBestMatch(animeWithHomeTitle, nimegamiSlugList);
+                    if (match) {
+                        nimegamiInfo.found_slug = match.found_slug;
+                        nimegamiInfo.found_slug_title = match.found_slug_title;
+                        nimegamiInfo.match_method = 'home_cache';
+                        nimegamiInfo.episode_url = `${process.env.NIMEGAMI_BASE_URL}/${match.found_slug}`;
+                        console.log(`[Episode Route] Found Nimegami slug using home cache title for anime ID ${id}`);
+                    }
+                }
             }
         }
 

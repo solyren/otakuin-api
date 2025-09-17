@@ -1,103 +1,191 @@
-# Otakuin API - Context for Qwen Code
+# Otakuin API Project Context
 
 ## Project Overview
 
-This project is a TypeScript-based API for streaming anime, built with Bun and ElysiaJS. It scrapes data from sources like Samehadaku and Nimegami, enriches it with data from Anilist, and provides a clean JSON API for clients. Key features include API key authentication, smart scraping and updating of anime lists, fuzzy title matching for Anilist data, manual mapping for incorrect matches, episode streaming proxies, and smart caching with Redis.
+Otakuin API is an unofficial anime streaming API that provides clean JSON data by scraping content from various popular sources and enriching it with information from Anilist. The API is built with Bun + ElysiaJS and offers features like API key authentication, smart anime data updating, episode streaming with proxying, and smart caching with Redis.
 
-## Technologies
+### Key Features
+- API Key Authentication (can be enabled/disabled via environment variables)
+- Smart anime data updating system with a worker queue
+- Episode streaming with proxying for safer viewing
+- Smart caching using Redis (Upstash)
+- Interactive API documentation with Swagger
+- Smart search algorithm for matching anime titles
+- Manual mapping system for correcting title mismatches
+- Top 10 weekly anime list
+- Genre-based search with pagination
 
-- **Runtime/Toolkit:** Bun
-- **Web Framework:** ElysiaJS
-- **Language:** TypeScript
-- **Caching/Job Queue/Manual Map Storage:** Redis (Upstash)
-- **HTML Parsing (Scraping):** Cheerio
-- **Search/Matching:** Fuse.js
-- **API Documentation:** Swagger (via `@elysiajs/swagger`)
-- **Process Manager (Production):** PM2 (uses `ecosystem.config.cjs`)
+### Technologies Used
+- **Runtime**: Bun (JavaScript/TypeScript runtime)
+- **Framework**: ElysiaJS (web framework)
+- **Language**: TypeScript
+- **HTML Parsing**: Cheerio (for scraping)
+- **Caching/Queue**: Redis (Upstash)
+- **API Documentation**: Swagger
+- **Search**: Fuse.js (fuzzy search)
+
+## Project Structure
+
+```
+otakuin-api/
+├── src/
+│   ├── data/                   # Manual mapping files
+│   ├── lib/                    # Utility libraries (redis, anilist, security, etc.)
+│   ├── routes/                 # API route definitions
+│   ├── scrapers/               # Anime source scrapers (samehadaku, nimegami)
+│   ├── cron/                   # Scheduled tasks (home page, top 10 updates)
+│   ├── index.ts                # App initialization
+│   ├── main.ts                 # Main server entry point
+│   ├── worker.ts               # Background worker for data enrichment
+│   ├── manual_map.ts           # CLI tool for manual mapping
+│   ├── sync_map.ts             # CLI tool to sync mapping files to Redis
+│   ├── scan.ts                 # CLI tool for HTML structure scanning
+│   └── scrapers/index.ts       # Scraper orchestrator
+├── ecosystem.config.cjs        # PM2 configuration for production deployment
+├── package.json                # Dependencies and scripts
+├── tsconfig.json               # TypeScript configuration
+├── .env.example               # Environment variables template
+└── README.md                  # Project documentation
+```
 
 ## Building and Running
 
 ### Prerequisites
+- Bun runtime installed
+- Redis instance (Upstash recommended)
+- API keys for external services (Anilist doesn't require auth)
 
-1.  Install [Bun](https://bun.sh/).
-2.  (For Production) Install [PM2](https://pm2.keymetrics.io/) globally: `npm install -g pm2`
+### Installation
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   bun install
+   ```
 
-### Setup
+### Environment Setup
+Copy `.env.example` to `.env` and configure:
+- `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` for Redis
+- `SAMEHADAKU_BASE_URL` and `NIMEGAMI_BASE_URL` for scraping sources
+- `API_AUTH_ENABLED` to enable/disable API key authentication
+- `API_KEY` for API authentication when enabled
 
-1.  Clone the repository.
-2.  Install dependencies: `bun install`
-3.  Configure environment variables:
-    *   Copy `.env.example` to `.env`: `cp .env.example .env`
-    *   Edit `.env` and fill in the required values, especially `API_AUTH_ENABLED` and `API_KEY`.
-
-### Running the Application
-
-The application consists of two main processes: the main API server and a background worker that enriches scraped data with Anilist information.
-
-#### For Development
-
-Run the main server with auto-reload:
+### Development
+Run the development server with auto-reload:
 ```bash
 bun run dev
 ```
 
-In a separate terminal, run the worker:
+In a separate terminal, run the worker process:
 ```bash
 bun run worker
 ```
 
-#### For Production (Recommended)
-
-Use PM2 to manage both processes:
+### Production
+Use PM2 for production deployment:
 ```bash
+# Install PM2 globally
+npm install -g pm2
+
+# Start both main server and worker
 pm2 start ecosystem.config.cjs
 ```
-This command starts both the main server and the worker as defined in `ecosystem.config.cjs`. You can monitor logs using `pm2 logs`.
 
-## Development Conventions and Project Structure
+### Available Scripts
+- `bun run dev` - Run development server with auto-reload
+- `bun run start` - Run both main server and worker processes
+- `bun run worker` - Run the background worker for data enrichment
+- `bun run scrape` - Run all scrapers to collect anime slugs
+- `bun run map <source> <anilistId> <slug>` - Create manual mapping for anime
+- `bun run sync:map <source>` - Sync manual mapping files to Redis
+- `bun run scan <url>` - Scan HTML structure of a URL for debugging
 
-- **Entry Points:**
-  - `src/main.ts`: Starts the ElysiaJS server and schedules periodic update jobs (home page, top 10).
-  - `src/worker.ts`: Runs a continuous loop to process jobs from a Redis queue, typically for enriching scraped anime data with Anilist information.
-- **Core API Logic:**
-  - `src/index.ts`: Configures the main ElysiaJS app, includes middleware (logging, error handling, security), sets up Swagger documentation, and defines the main route groups (`/api`).
-  - `src/routes/`: Contains ElysiaJS route definitions for different API endpoints (e.g., `home.ts`, `anime.ts`, `stream.ts`, `search.ts`, `genre.ts`, `top10.ts`).
-- **Libraries:**
-  - `src/lib/`: Houses reusable modules like Redis connection (`redis.ts`), Anilist API interaction and fuzzy matching (`anilist.ts`), security middleware (`security.ts`), and logging (`logger.ts`, `request_logger.ts`).
-- **Background Jobs/Cron:**
-  - `src/cron/`: Contains logic for periodic tasks, such as updating the home page cache (`update_home.ts`) and the top 10 list (`update_top10.ts`).
-- **Scrapers:**
-  - `src/scrapers/`: (Not fully read, but inferred from `package.json` script) Contains logic for scraping data from external sources like Samehadaku and Nimegami.
-- **Manual Mapping:**
-  - `src/manual_map.ts`: Script to manually map an Anilist ID to a slug for a specific source (e.g., if automatic matching fails). This mapping is stored in a JSON file (`src/data/manual_map_<source>.json`) and synced to Redis.
-  - `src/sync_map.ts`: Script to synchronize the manual mapping JSON files to Redis.
-- **Utility Scripts:**
-  - `src/scan.ts`: A utility script to perform a deep scan of an HTML page's structure and output it as JSON.
-- **Configuration:**
-  - `ecosystem.config.cjs`: PM2 configuration file for managing the application in production.
-  - `.env`: Environment variables (not committed, use `.env.example` as a template).
-  - `package.json`: Project dependencies and scripts.
+## API Documentation
 
-## Key Scripts (via `bun run <script>`)
+Interactive API documentation is available at `/docs` when the server is running. Key endpoints include:
 
-- `dev`: Starts the main API server in development mode with auto-reload.
-- `start`: (Not recommended for production) Attempts to run both main server and worker in the foreground using `&`. Use PM2 instead.
-- `worker`: Starts the background enrichment worker.
-- `scrape`: Runs the scrapers to gather initial data (slug lists) from sources.
-- `map <source> <anilistId> <slug>`: Manually creates a mapping between an Anilist ID and a source-specific slug.
-- `sync:map <source>`: Synchronizes the manual mapping file for a source to Redis.
-- `scan <url>`: Runs the HTML structure scanner utility on a given URL.
+- `GET /api/home` - Latest anime list
+- `GET /api/anime/{id}` - Anime details
+- `GET /api/anime/{id}/episode/{episode}` - Episode streaming sources
+- `GET /api/anime/stream/{stream_id}` - Stream proxy endpoint
+- `GET /api/search?q=...` - Search anime with pagination
+- `GET /api/genre/{genre}` - Search by genre with pagination
+- `GET /api/top10` - Top 10 weekly anime
 
-## API Security
+When API authentication is enabled, all `/api` endpoints require the `x-api-key` header with a valid API key.
 
-API security is handled by the middleware in `src/lib/security.ts`. It checks for the `x-api-key` header on all requests under the `/api` path if the environment variable `API_AUTH_ENABLED` is set to `true`. The expected key value is defined by the `API_KEY` environment variable.
+## Development Conventions
 
-## Data Flow Overview
+### Code Style
+- TypeScript with strict typing
+- ElysiaJS framework patterns
+- Modular structure with separate files for routes, libraries, and utilities
 
-1.  **Scraping:** Periodic jobs (e.g., `updateHome`) or manual scripts (`bun run scrape`) scrape data (like anime titles and slugs) from external sources.
-2.  **Queueing:** New or updated items from scraping are added to a Redis queue (`queue:enrichment`).
-3.  **Enrichment (Worker):** The worker (`src/worker.ts`) continuously pulls jobs from the queue. For each job, it uses the scraped title/slug to search Anilist (via `src/lib/anilist.ts`).
-4.  **Matching:** Anilist matching uses normalization and fuzzy search (Fuse.js) to find the best match. Manual mappings (from Redis/JSON files) are checked first.
-5.  **Storage:** Enriched data (Anilist ID, title, image, score) is used to update the relevant cache in Redis (e.g., `home:anime_list`, `top10:anime_list`).
-6.  **API Serving:** API endpoints (e.g., `/api/home`) fetch data from the Redis cache to respond to client requests.
-7.  **Manual Correction:** If automatic matching is wrong, the `bun run map` script can create a manual mapping, which the worker will use in future enrichment jobs.
+### Data Flow
+1. Scrapers collect anime slugs from sources and store them in Redis
+2. Cron jobs periodically update home page and top 10 data
+3. Worker processes enrich raw scraped data with Anilist information
+4. Manual mapping can override automatic matching when needed
+5. All data is cached in Redis for performance
+
+### Smart Matching Algorithm
+The system implements an advanced multi-level matching algorithm to accurately pair Anilist anime data with scraped source data:
+
+1. **Primary Matching**: Uses Fuse.js for fuzzy string matching with titles from Anilist (romaji, english, native)
+2. **Character-by-Character Similarity**: When Fuse.js doesn't find a good match, the system calculates similarity using Levenshtein distance
+3. **Containment Detection**: Identifies when one title contains another (e.g., "Necronomico no Cosmic Horror Show" contains "Necronomico")
+4. **Season/Part/Cour Handling**: Automatically handles variations like "Season 2", "2nd Season", "Part 3", etc.
+5. **Fallback Mechanisms**: Uses home cache titles as a last resort when direct matching fails
+6. **Priority System**: Prioritizes Samehadaku as the primary source for episode data
+
+This intelligent matching system ensures accurate pairing of anime data without relying on exact string matches, making it robust against variations in title formatting across different sources.
+
+### Error Handling
+- Global error handlers in `src/index.ts`
+- Detailed logging for debugging
+- Graceful failure handling in scrapers and API calls
+
+### Caching Strategy
+- Redis is used for all caching needs
+- Anilist data is cached for 24 hours
+- Search results are cached for 1 hour
+- Home page and top 10 data are updated on schedule
+- Manual mappings are stored in Redis hash sets
+
+### Testing
+- Currently no automated test suite
+- Manual testing through Swagger UI
+- Error logging for debugging issues
+
+## Key Components
+
+### Scrapers
+- `samehadaku_scraper.ts` and `nimegami_scraper.ts` collect anime slugs
+- Run via `bun run scrape` command
+- Store data in Redis hash sets
+
+### Worker Process
+- `worker.ts` enriches raw scraped data with Anilist information
+- Processes jobs from Redis queue
+- Handles manual mapping overrides
+- Updates cached data in Redis
+
+### Manual Mapping
+- Corrects mismatches between scraped titles and Anilist data
+- Stored in JSON files in `src/data/`
+- Synced to Redis with `bun run sync:map`
+- Can be updated with `bun run map`
+
+### Security
+- Optional API key authentication via `x-api-key` header
+- Configurable via environment variables
+- Applied to all `/api` routes when enabled
+
+### Smart Matching System
+- Advanced title matching algorithm using Fuse.js and character-by-character similarity
+- Handles partial matches, containment, and variations in titles
+- Supports season/part/cour detection and matching
+- Fallback mechanisms for improved accuracy
+- Prioritizes Samehadaku as the primary source for episode data
+
+## Deployment
+Production deployment uses PM2 with the configuration in `ecosystem.config.cjs` which runs both the main server and worker processes. The `NODE_TLS_REJECT_UNAUTHORIZED=0` environment variable is used to handle SSL certificate issues with some scraping sources.

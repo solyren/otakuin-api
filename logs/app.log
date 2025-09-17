@@ -901,3 +901,130 @@
 [2025-09-16T14:59:45.672Z] Error: Failed to fetch video from https://cdn-bunny.berkasdrive.com/public/86/[nimegami]-sakamoto-days-p2-ep-11-(1080p).mp4. Status: 523
     at <anonymous> (/home/abib/Project/Api/otakuin-api/src/routes/stream.ts:393:27)
     at processTicksAndRejections (native:7:39)
+[2025-09-17T10:48:34.541Z] [Request] GET http://localhost:3000/api/home
+[2025-09-17T10:48:35.109Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T10:48:46.654Z] [Request] GET http://localhost:3000/api/anime/185505
+[2025-09-17T10:48:49.774Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T10:55:12.868Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T10:55:12.926Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T10:55:12.948Z] [Request] GET http://localhost:3000/api/anime/185505
+[2025-09-17T10:55:13.003Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T10:55:17.466Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T10:55:28.856Z] [Request] GET http://localhost:3000/api/home
+[2025-09-17T10:55:29.060Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T11:15:53.608Z] [Request] GET http://localhost:3000/api/anime/185505
+[2025-09-17T11:16:08.698Z] [Request] GET http://localhost:3000/api/anime/185505/episode/4
+[2025-09-17T11:16:38.543Z] [Request] GET http://localhost:3000/api/anime/185505/episode/4
+[2025-09-17T11:16:51.457Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T11:21:45.464Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T11:27:44.544Z] [Request] GET http://localhost:3000/api/anime/179344
+[2025-09-17T11:27:50.107Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T11:28:29.296Z] [Request] GET http://localhost:3000/api/anime/184237
+[2025-09-17T11:28:34.338Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T11:29:00.135Z] [Request] GET http://localhost:3000/api/anime/178433
+[2025-09-17T11:29:04.986Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T11:29:18.289Z] [Request] GET http://localhost:3000/api/anime/178433/episode/1
+[2025-09-17T11:29:53.146Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T11:30:32.011Z] [Request] GET http://localhost:3000/api/anime/stream/a296917b
+[2025-09-17T11:30:33.323Z] Error: Failed to fetch video from https://cdn-bunny.berkasdrive.com/public/86/[nimegami]-isekai-mokushiroku-mynoghra-ep-01-(1080p).mp4. Status: 523
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/routes/stream.ts:393:27)
+    at processTicksAndRejections (native:7:39)
+[2025-09-17T11:30:33.555Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
