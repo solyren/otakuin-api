@@ -1,6 +1,6 @@
 import * as cheerio from 'cheerio';
-import { redis } from '../lib/redis';
-import { logger, errorLogger } from '../lib/logger';
+import { redis } from '../../lib/redis';
+import { logger, errorLogger } from '../../lib/logger';
 
 const BASE_URL = `${process.env.NIMEGAMI_BASE_URL}/anime-list/`;
 const SOURCE_KEY = 'slugs:nimegami';

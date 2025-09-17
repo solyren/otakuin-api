@@ -9,7 +9,7 @@ module.exports = {
     }
   }, {
     name: 'otakuin-worker',
-    script: 'src/worker.ts',
+    script: 'src/core/worker/index.ts',
     interpreter: 'bun',
     env: {
       NODE_ENV: 'production',

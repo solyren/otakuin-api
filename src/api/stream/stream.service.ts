@@ -1,5 +1,4 @@
-import { Elysia, t } from 'elysia';
-import { redis } from '../lib/redis';
+import { redis } from '../../lib/redis';
 import * as cheerio from 'cheerio';
 import axios from 'axios';
 import { CookieJar } from 'tough-cookie';
@@ -363,153 +362,126 @@ const getDlBerkasDriveStream = async (url: string, server?: string) => {
     throw new Error('No stream URL found on DlBerkasDrive page');
 };
 
-// --- Stream Route ---
-export const stream = new Elysia()
-    .get('/anime/stream/:id', async ({ params, set, request, ip }) => {
-        const { id } = params;
+export const getStream = async (id: string, request: Request, ip: string | null) => {
+    let streamUrl = await redis.get(`${STREAM_KEY_PREFIX}${id}`);
 
-        if (!id) {
-            set.status = 400;
-            return { error: 'Missing stream ID' };
+    if (!streamUrl) {
+        return { error: 'Stream ID not found or has expired. Please fetch a new one.' };
+    }
+
+    // --- Generic Proxy Handler ---
+    const genericProxyHandler = async (url: string, referer?: string) => {
+        const fetchHeaders: Record<string, string> = {
+            'User-Agent': FAKE_USER_AGENT,
+        };
+        if (referer) {
+            fetchHeaders['Referer'] = referer;
         }
 
-        // --- Generic Proxy Handler ---
-        const genericProxyHandler = async (url: string, referer?: string) => {
+        const rangeHeader = request.headers.get('range');
+        if (rangeHeader) {
+            fetchHeaders['range'] = rangeHeader;
+        }
+
+        const videoResponse = await fetch(url, { headers: fetchHeaders });
+
+        if (!videoResponse.ok) {
+            throw new Error(`Failed to fetch video from ${url}. Status: ${videoResponse.status}`);
+        }
+
+        const responseHeaders = new Headers(videoResponse.headers);
+        responseHeaders.set('Content-Disposition', 'inline');
+
+        const originalContentType = responseHeaders.get('Content-Type');
+        if (!originalContentType || originalContentType.includes('octet-stream')) {
+            if (url.includes('.m3u8')) {
+                responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
+            } else {
+                responseHeaders.set('Content-Type', 'video/mp4');
+            }
+        }
+
+        return new Response(videoResponse.body, {
+            status: videoResponse.status,
+            statusText: videoResponse.statusText,
+            headers: responseHeaders
+        });
+    };
+
+    if (streamUrl.includes('doply.net') || streamUrl.includes('d-s.io')) {
+        const doodResult = await getDoodStream(streamUrl);
+        return genericProxyHandler(doodResult.url, streamUrl);
+    }
+
+    if (streamUrl.includes('yourupload.com')) {
+        const yourUploadResult = await getYourUploadStream(streamUrl);
+        return genericProxyHandler(yourUploadResult.url, streamUrl);
+    }
+
+    if (streamUrl.includes('blogger.com')) {
+        const result = await getBloggerStreams(streamUrl, ip);
+        if (result && result.streams && result.streams[0] && result.streams[0].play_url) {
+            const videoUrl = result.streams[0].play_url;
             const fetchHeaders: Record<string, string> = {
                 'User-Agent': FAKE_USER_AGENT,
+                'Referer': streamUrl,
             };
-            if (referer) {
-                fetchHeaders['Referer'] = referer;
+            if (result.cookie) {
+                fetchHeaders['Cookie'] = result.cookie;
             }
-
             const rangeHeader = request.headers.get('range');
             if (rangeHeader) {
                 fetchHeaders['range'] = rangeHeader;
             }
-
-            const videoResponse = await fetch(url, { headers: fetchHeaders });
-
+            const videoResponse = await fetch(videoUrl, { headers: fetchHeaders });
             if (!videoResponse.ok) {
-                throw new Error(`Failed to fetch video from ${url}. Status: ${videoResponse.status}`);
+                throw new Error(`Failed to fetch video from Google. Status: ${videoResponse.status}`)
             }
-
-            const responseHeaders = new Headers(videoResponse.headers);
-            responseHeaders.set('Content-Disposition', 'inline');
-
-            const originalContentType = responseHeaders.get('Content-Type');
-            if (!originalContentType || originalContentType.includes('octet-stream')) {
-                if (url.includes('.m3u8')) {
-                    responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
-                } else {
-                    responseHeaders.set('Content-Type', 'video/mp4');
-                }
-            }
-
-            return new Response(videoResponse.body, {
-                status: videoResponse.status,
-                statusText: videoResponse.statusText,
-                headers: responseHeaders
-            });
-        };
-
-        try {
-            let streamUrl = await redis.get(`${STREAM_KEY_PREFIX}${id}`);
-
-            if (!streamUrl) {
-                set.status = 404;
-                return { error: 'Stream ID not found or has expired. Please fetch a new one.' };
-            }
-
-            if (streamUrl.includes('doply.net') || streamUrl.includes('d-s.io')) {
-                const doodResult = await getDoodStream(streamUrl);
-                return genericProxyHandler(doodResult.url, streamUrl);
-            }
-
-            if (streamUrl.includes('yourupload.com')) {
-                const yourUploadResult = await getYourUploadStream(streamUrl);
-                return genericProxyHandler(yourUploadResult.url, streamUrl);
-            }
-
-            if (streamUrl.includes('blogger.com')) {
-                const result = await getBloggerStreams(streamUrl, ip);
-                if (result && result.streams && result.streams[0] && result.streams[0].play_url) {
-                    const videoUrl = result.streams[0].play_url;
-                    const fetchHeaders: Record<string, string> = {
-                        'User-Agent': FAKE_USER_AGENT,
-                        'Referer': streamUrl,
-                    };
-                    if (result.cookie) {
-                        fetchHeaders['Cookie'] = result.cookie;
-                    }
-                    const rangeHeader = request.headers.get('range');
-                    if (rangeHeader) {
-                        fetchHeaders['range'] = rangeHeader;
-                    }
-                    const videoResponse = await fetch(videoUrl, { headers: fetchHeaders });
-                    if (!videoResponse.ok) {
-                        throw new Error(`Failed to fetch video from Google. Status: ${videoResponse.status}`)
-                    }
-                    return videoResponse;
-                } else {
-                    throw new Error('No play_url found in streams');
-                }
-            } else if (streamUrl.includes('filedon.co')) {
-                const filedonResult = await getFiledonStream(streamUrl);
-                return genericProxyHandler(filedonResult.url, streamUrl);
-            } else if (streamUrl.includes('pixeldrain.com')) {
-                let videoUrl = streamUrl;
-                if (!streamUrl.includes('/api/file/')) {
-                    const pixeldrainResult = await getPixeldrainStream(streamUrl);
-                    videoUrl = pixeldrainResult.url;
-                }
-                return genericProxyHandler(videoUrl, 'https://pixeldrain.com/');
-            } else if (streamUrl.includes('wibufile.com')) {
-                let videoUrl: string;
-                if (streamUrl.includes('s0.wibufile.com') || streamUrl.includes('.mp4')) {
-                    videoUrl = streamUrl;
-                } else {
-                    const wibufileResult = await getWibufileStream(streamUrl, request);
-                    videoUrl = wibufileResult.url;
-                }
-                return genericProxyHandler(videoUrl, process.env.SAMEHADAKU_BASE_URL);
-            } else if (streamUrl.includes('krakenfiles.com')) {
-                const krakenResult = await getKrakenfilesStream(streamUrl);
-                return genericProxyHandler(krakenResult.url, streamUrl);
-            } else if (streamUrl.includes('mp4upload.com')) {
-                const mp4uploadResult = await getMp4uploadStream(streamUrl);
-                return genericProxyHandler(mp4uploadResult.url, streamUrl);
-            } else if (streamUrl.includes('dl.berkasdrive.com')) {
-                // Parse URL untuk mendapatkan parameter server jika ada
-                const urlObj = new URL(streamUrl);
-                const serverParam = urlObj.searchParams.get('server') || undefined;
-                
-                // Hapus parameter server dari URL untuk mendapatkan URL dasar
-                urlObj.searchParams.delete('server');
-                const baseUrl = urlObj.toString();
-                
-                const dlBerkasResult = await getDlBerkasDriveStream(baseUrl, serverParam);
-                return genericProxyHandler(dlBerkasResult.url, baseUrl);
-            } else if (streamUrl.includes('tsukasa.my.id') || streamUrl.includes('googleapis.com') || streamUrl.includes('dropbox.com') || streamUrl.includes('vidcache.net')) {
-                const videoUrl = streamUrl.includes('dropbox.com') ? streamUrl.replace(/&dl=1$/, '&raw=1') : streamUrl;
-                const referer = streamUrl.includes('dropbox.com') ? process.env.ANIMESAIL_BASE_URL : undefined;
-                return genericProxyHandler(videoUrl, referer);
-            } else {
-                set.status = 501;
-                return { error: 'This stream provider is not yet supported for proxying.' };
-            }
-
-        } catch (error: any) {
-            set.status = 500;
-            return { error: error.message || 'Internal server error' };
+            return videoResponse;
+        } else {
+            throw new Error('No play_url found in streams');
         }
-
-    }, {
-        params: t.Object({
-            id: t.String()
-        }),
-        detail: {
-            summary: 'Proxy Stream Video',
-            description: 'Proxy untuk stream video dari provider pihak ketiga. Endpoint ini akan mengambil video dari URL asli dan meneruskannya ke client. Mendukung "range requests" untuk seeking.',
-            tags: ['Stream']
+    } else if (streamUrl.includes('filedon.co')) {
+        const filedonResult = await getFiledonStream(streamUrl);
+        return genericProxyHandler(filedonResult.url, streamUrl);
+    } else if (streamUrl.includes('pixeldrain.com')) {
+        let videoUrl = streamUrl;
+        if (!streamUrl.includes('/api/file/')) {
+            const pixeldrainResult = await getPixeldrainStream(streamUrl);
+            videoUrl = pixeldrainResult.url;
         }
-    });
+        return genericProxyHandler(videoUrl, 'https://pixeldrain.com/');
+    } else if (streamUrl.includes('wibufile.com')) {
+        let videoUrl: string;
+        if (streamUrl.includes('s0.wibufile.com') || streamUrl.includes('.mp4')) {
+            videoUrl = streamUrl;
+        } else {
+            const wibufileResult = await getWibufileStream(streamUrl, request);
+            videoUrl = wibufileResult.url;
+        }
+        return genericProxyHandler(videoUrl, process.env.SAMEHADAKU_BASE_URL);
+    } else if (streamUrl.includes('krakenfiles.com')) {
+        const krakenResult = await getKrakenfilesStream(streamUrl);
+        return genericProxyHandler(krakenResult.url, streamUrl);
+    } else if (streamUrl.includes('mp4upload.com')) {
+        const mp4uploadResult = await getMp4uploadStream(streamUrl);
+        return genericProxyHandler(mp4uploadResult.url, streamUrl);
+    } else if (streamUrl.includes('dl.berkasdrive.com')) {
+        // Parse URL untuk mendapatkan parameter server jika ada
+        const urlObj = new URL(streamUrl);
+        const serverParam = urlObj.searchParams.get('server') || undefined;
+        
+        // Hapus parameter server dari URL untuk mendapatkan URL dasar
+        urlObj.searchParams.delete('server');
+        const baseUrl = urlObj.toString();
+        
+        const dlBerkasResult = await getDlBerkasDriveStream(baseUrl, serverParam);
+        return genericProxyHandler(dlBerkasResult.url, baseUrl);
+    } else if (streamUrl.includes('tsukasa.my.id') || streamUrl.includes('googleapis.com') || streamUrl.includes('dropbox.com') || streamUrl.includes('vidcache.net')) {
+        const videoUrl = streamUrl.includes('dropbox.com') ? streamUrl.replace(/&dl=1$/, '&raw=1') : streamUrl;
+        const referer = streamUrl.includes('dropbox.com') ? process.env.ANIMESAIL_BASE_URL : undefined;
+        return genericProxyHandler(videoUrl, referer);
+    } else {
+        return { error: 'This stream provider is not yet supported for proxying.' };
+    }
+}

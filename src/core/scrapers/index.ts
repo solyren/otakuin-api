@@ -1,7 +1,7 @@
-import 'dotenv/config';
+import '../../config';
 import { startNimegamiScraping } from './nimegami_scraper';
 import { startSamehadakuScraping } from './samehadaku_scraper';
-import { logger, errorLogger } from '../lib/logger';
+import { logger, errorLogger } from '../../lib/logger';
 
 // --- Scrape All ---
 async function scrapeAll() {

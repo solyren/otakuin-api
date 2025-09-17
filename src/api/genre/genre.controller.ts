@@ -1,8 +1,7 @@
 import { Elysia, t } from 'elysia';
-import { getAnilistByGenre } from '../lib/anilist';
+import { getAnilistByGenre } from './genre.service';
 
-// --- Genre Routes ---
-export const genreRoutes = new Elysia()
+export const genreController = new Elysia()
     .get('/genre/:genre', async ({ params, query }) => {
         const { genre } = params;
         const { page = 1, perPage = 20 } = query;
@@ -20,5 +19,10 @@ export const genreRoutes = new Elysia()
         query: t.Object({
             page: t.Optional(t.Numeric()),
             perPage: t.Optional(t.Numeric()),
-        })
+        }),
+        detail: {
+            summary: 'Cari Anime Berdasarkan Genre',
+            description: 'Mencari anime berdasarkan genre dengan paginasi.',
+            tags: ['Genre']
+        }
     });

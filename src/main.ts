@@ -1,7 +1,7 @@
-import 'dotenv/config';
+import './config';
 import { app } from './index';
-import { updateHome } from './cron/update_home';
-import { updateTop10 } from './cron/update_top10';
+import { updateHome } from './core/cron/update_home';
+import { updateTop10 } from './core/cron/update_top10';
 
 // --- Main ---
 const main = async () => {

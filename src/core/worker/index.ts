@@ -1,6 +1,6 @@
-import 'dotenv/config';
-import { redis } from './lib/redis';
-import { getAnilistData, getAnilistDataById } from './lib/anilist';
+import '../../config';
+import { redis } from '../../lib/redis';
+import { getAnilistData, getAnilistDataById } from '../../lib/anilist';
 
 const ENRICHMENT_QUEUE_KEY = 'queue:enrichment';
 const HOME_CACHE_KEY = 'home:anime_list';

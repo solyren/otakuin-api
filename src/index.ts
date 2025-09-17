@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './config';
 import { Elysia } from 'elysia';
 import { errorLogger, logger } from './lib/logger';
 
@@ -15,12 +15,12 @@ process.on('unhandledRejection', (reason, promise) => {
     }
     process.exit(1);
 });
-import { home } from './routes/home';
-import { anime } from './routes/anime';
-import { stream } from './routes/stream';
-import { searchRoutes } from './routes/search';
-import { genreRoutes } from './routes/genre';
-import { top10 } from './routes/top10';
+import { homeRouter } from './api/home/home.router';
+import { animeRouter } from './api/anime/anime.router';
+import { streamRouter } from './api/stream/stream.router';
+import { searchRouter } from './api/search/search.router';
+import { genreRouter } from './api/genre/genre.router';
+import { top10Router } from './api/top10/top10.router';
 import { swagger } from '@elysiajs/swagger';
 
 import { requestLogger } from './lib/request_logger';
@@ -38,7 +38,7 @@ app.use(swagger({
     documentation: {
         info: {
             title: 'Otakuin API',
-            version: '1.0.0',
+            version: '0.0.2',
             description: 'Dokumentasi API untuk layanan streaming anime Otakuin.'
         }
     }
@@ -47,4 +47,4 @@ app.use(swagger({
 import { security } from './lib/security';
 
 app.get('/', () => 'Hello from Otakuin API!');
-app.group('/api', (app) => app.use(security).use(home).use(anime).use(stream).use(searchRoutes).use(genreRoutes).use(top10));
+app.group('/api', (app) => app.use(security).use(homeRouter).use(animeRouter).use(streamRouter).use(searchRouter).use(genreRouter).use(top10Router));

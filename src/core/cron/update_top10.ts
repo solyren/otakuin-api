@@ -1,7 +1,7 @@
-import 'dotenv/config';
+import '../../config';
 import * as cheerio from 'cheerio';
-import { redis } from '../lib/redis';
-import { normalizeSlug } from '../lib/anilist';
+import { redis } from '../../lib/redis';
+import { normalizeSlug } from '../../lib/anilist';
 
 const ENRICHMENT_QUEUE_KEY = 'queue:enrichment';
 const TOP10_CACHE_KEY = 'top10:anime_list';

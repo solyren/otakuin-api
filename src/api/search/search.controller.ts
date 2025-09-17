@@ -1,8 +1,7 @@
 import { Elysia, t } from 'elysia';
-import { searchAnilist } from '../lib/anilist';
+import { searchAnilist } from './search.service';
 
-// --- Search Routes ---
-export const searchRoutes = new Elysia()
+export const searchController = new Elysia()
     .get('/search', async ({ query }) => {
         const { q, page = 1, perPage = 20 } = query;
         if (!q) {
@@ -16,5 +15,10 @@ export const searchRoutes = new Elysia()
             q: t.String(),
             page: t.Optional(t.Numeric()),
             perPage: t.Optional(t.Numeric()),
-        })
+        }),
+        detail: {
+            summary: 'Cari Anime',
+            description: 'Mencari anime berdasarkan judul dengan paginasi.',
+            tags: ['Pencarian']
+        }
     });

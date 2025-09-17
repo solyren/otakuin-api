@@ -1028,3 +1028,126 @@
     at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
     at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
     at processTicksAndRejections (unknown:7:39)
+[2025-09-17T15:40:32.752Z] Starting all scrapers...
+[2025-09-17T15:40:32.756Z] Starting Nimegami scraper...
+[2025-09-17T15:40:32.757Z] [Nimegami] Starting scraping...
+[2025-09-17T15:40:33.466Z] [Nimegami] Cleared old data from slugs:nimegami
+[2025-09-17T15:40:33.468Z] [Nimegami] Scraping page 1 from https://nimegami.id/anime-list/
+[2025-09-17T15:40:34.453Z] [Nimegami] Found 506 anime links on page 1.
+[2025-09-17T15:40:34.674Z] [Nimegami] Successfully stored 506 slugs from page 1 in Redis.
+[2025-09-17T15:40:35.677Z] [Nimegami] Scraping page 2 from https://nimegami.id/anime-list/page/2/
+[2025-09-17T15:40:36.137Z] [Nimegami] Found 507 anime links on page 2.
+[2025-09-17T15:40:36.321Z] [Nimegami] Successfully stored 507 slugs from page 2 in Redis.
+[2025-09-17T15:40:37.338Z] [Nimegami] Scraping page 3 from https://nimegami.id/anime-list/page/3/
+[2025-09-17T15:40:38.201Z] [Nimegami] Found 508 anime links on page 3.
+[2025-09-17T15:40:38.341Z] [Nimegami] Successfully stored 508 slugs from page 3 in Redis.
+[2025-09-17T15:40:39.375Z] [Nimegami] Scraping page 4 from https://nimegami.id/anime-list/page/4/
+[2025-09-17T15:40:39.897Z] [Nimegami] Found 509 anime links on page 4.
+[2025-09-17T15:40:40.032Z] [Nimegami] Successfully stored 509 slugs from page 4 in Redis.
+[2025-09-17T15:40:41.040Z] [Nimegami] Scraping page 5 from https://nimegami.id/anime-list/page/5/
+[2025-09-17T15:40:41.493Z] [Nimegami] Found 509 anime links on page 5.
+[2025-09-17T15:40:41.632Z] [Nimegami] Successfully stored 509 slugs from page 5 in Redis.
+[2025-09-17T15:40:42.650Z] [Nimegami] Scraping page 6 from https://nimegami.id/anime-list/page/6/
+[2025-09-17T15:40:43.213Z] [Nimegami] Found 508 anime links on page 6.
+[2025-09-17T15:40:43.364Z] [Nimegami] Successfully stored 508 slugs from page 6 in Redis.
+[2025-09-17T15:40:44.387Z] [Nimegami] Scraping page 7 from https://nimegami.id/anime-list/page/7/
+[2025-09-17T15:40:44.815Z] [Nimegami] Found 507 anime links on page 7.
+[2025-09-17T15:40:44.950Z] [Nimegami] Successfully stored 507 slugs from page 7 in Redis.
+[2025-09-17T15:40:45.961Z] [Nimegami] Scraping page 8 from https://nimegami.id/anime-list/page/8/
+[2025-09-17T15:40:46.290Z] [Nimegami] Found 126 anime links on page 8.
+[2025-09-17T15:40:46.406Z] [Nimegami] Successfully stored 126 slugs from page 8 in Redis.
+[2025-09-17T15:40:47.407Z] [Nimegami] Scraping page 9 from https://nimegami.id/anime-list/page/9/
+[2025-09-17T15:40:47.624Z] [Nimegami] Found 0 anime links on page 9.
+[2025-09-17T15:40:47.625Z] [Nimegami] No more anime links found. Exiting.
+[2025-09-17T15:40:47.671Z] [Nimegami] Finished scraping. Total slugs stored: 3610
+[2025-09-17T15:40:47.672Z] Nimegami scraper finished.
+[2025-09-17T15:40:52.674Z] Starting Samehadaku scraper...
+[2025-09-17T15:40:52.678Z] [Samehadaku] Starting scraping...
+[2025-09-17T15:40:52.731Z] [Samehadaku] Cleared old data from slugs:samehadaku
+[2025-09-17T15:40:52.735Z] [Samehadaku] Scraping page 1 from https://v1.samehadaku.how/daftar-anime-2/
+[2025-09-17T15:40:53.497Z] [Samehadaku] Found 30 anime links on page 1.
+[2025-09-17T15:40:53.681Z] [Samehadaku] Successfully stored 30 slugs from page 1 in Redis.
+[2025-09-17T15:40:54.683Z] [Samehadaku] Scraping page 2 from https://v1.samehadaku.how/daftar-anime-2/page/2/
+[2025-09-17T15:40:55.107Z] [Samehadaku] Found 30 anime links on page 2.
+[2025-09-17T15:40:55.164Z] [Samehadaku] Successfully stored 30 slugs from page 2 in Redis.
+[2025-09-17T15:40:56.186Z] [Samehadaku] Scraping page 3 from https://v1.samehadaku.how/daftar-anime-2/page/3/
+[2025-09-17T15:40:56.577Z] [Samehadaku] Found 30 anime links on page 3.
+[2025-09-17T15:40:56.631Z] [Samehadaku] Successfully stored 30 slugs from page 3 in Redis.
+[2025-09-17T15:40:57.632Z] [Samehadaku] Scraping page 4 from https://v1.samehadaku.how/daftar-anime-2/page/4/
+[2025-09-17T15:40:58.083Z] [Samehadaku] Found 30 anime links on page 4.
+[2025-09-17T15:40:58.156Z] [Samehadaku] Successfully stored 30 slugs from page 4 in Redis.
+[2025-09-17T15:40:59.185Z] [Samehadaku] Scraping page 5 from https://v1.samehadaku.how/daftar-anime-2/page/5/
+[2025-09-17T15:40:59.620Z] [Samehadaku] Found 30 anime links on page 5.
+[2025-09-17T15:40:59.810Z] [Samehadaku] Successfully stored 30 slugs from page 5 in Redis.
+[2025-09-17T15:41:00.847Z] [Samehadaku] Scraping page 6 from https://v1.samehadaku.how/daftar-anime-2/page/6/
+[2025-09-17T15:41:01.428Z] [Samehadaku] Found 30 anime links on page 6.
+[2025-09-17T15:41:01.537Z] [Samehadaku] Successfully stored 30 slugs from page 6 in Redis.
+[2025-09-17T15:41:02.538Z] [Samehadaku] Scraping page 7 from https://v1.samehadaku.how/daftar-anime-2/page/7/
+[2025-09-17T15:41:02.934Z] [Samehadaku] Found 30 anime links on page 7.
+[2025-09-17T15:41:03.024Z] [Samehadaku] Successfully stored 30 slugs from page 7 in Redis.
+[2025-09-17T15:41:04.059Z] [Samehadaku] Scraping page 8 from https://v1.samehadaku.how/daftar-anime-2/page/8/
+[2025-09-17T15:41:04.459Z] [Samehadaku] Found 30 anime links on page 8.
+[2025-09-17T15:41:04.527Z] [Samehadaku] Successfully stored 30 slugs from page 8 in Redis.
+[2025-09-17T15:41:05.528Z] [Samehadaku] Scraping page 9 from https://v1.samehadaku.how/daftar-anime-2/page/9/
+[2025-09-17T15:41:05.959Z] [Samehadaku] Found 30 anime links on page 9.
+[2025-09-17T15:41:06.106Z] [Samehadaku] Successfully stored 30 slugs from page 9 in Redis.
+[2025-09-17T15:41:07.157Z] [Samehadaku] Scraping page 10 from https://v1.samehadaku.how/daftar-anime-2/page/10/
+[2025-09-17T15:41:07.741Z] [Samehadaku] Found 30 anime links on page 10.
+[2025-09-17T15:41:07.864Z] [Samehadaku] Successfully stored 30 slugs from page 10 in Redis.
+[2025-09-17T15:41:08.929Z] [Samehadaku] Scraping page 11 from https://v1.samehadaku.how/daftar-anime-2/page/11/
+[2025-09-17T15:41:09.558Z] [Samehadaku] Found 30 anime links on page 11.
+[2025-09-17T15:41:09.679Z] [Samehadaku] Successfully stored 30 slugs from page 11 in Redis.
+[2025-09-17T15:41:10.684Z] [Samehadaku] Scraping page 12 from https://v1.samehadaku.how/daftar-anime-2/page/12/
+[2025-09-17T15:41:11.059Z] [Samehadaku] Found 30 anime links on page 12.
+[2025-09-17T15:41:11.142Z] [Samehadaku] Successfully stored 30 slugs from page 12 in Redis.
+[2025-09-17T15:41:12.149Z] [Samehadaku] Scraping page 13 from https://v1.samehadaku.how/daftar-anime-2/page/13/
+[2025-09-17T15:41:12.550Z] [Samehadaku] Found 30 anime links on page 13.
+[2025-09-17T15:41:12.615Z] [Samehadaku] Successfully stored 30 slugs from page 13 in Redis.
+[2025-09-17T15:41:13.616Z] [Samehadaku] Scraping page 14 from https://v1.samehadaku.how/daftar-anime-2/page/14/
+[2025-09-17T15:41:14.036Z] [Samehadaku] Found 30 anime links on page 14.
+[2025-09-17T15:41:14.090Z] [Samehadaku] Successfully stored 30 slugs from page 14 in Redis.
+[2025-09-17T15:41:15.107Z] [Samehadaku] Scraping page 15 from https://v1.samehadaku.how/daftar-anime-2/page/15/
+[2025-09-17T15:41:15.534Z] [Samehadaku] Found 30 anime links on page 15.
+[2025-09-17T15:41:15.627Z] [Samehadaku] Successfully stored 30 slugs from page 15 in Redis.
+[2025-09-17T15:41:16.631Z] [Samehadaku] Scraping page 16 from https://v1.samehadaku.how/daftar-anime-2/page/16/
+[2025-09-17T15:41:17.035Z] [Samehadaku] Found 30 anime links on page 16.
+[2025-09-17T15:41:17.120Z] [Samehadaku] Successfully stored 30 slugs from page 16 in Redis.
+[2025-09-17T15:41:18.127Z] [Samehadaku] Scraping page 17 from https://v1.samehadaku.how/daftar-anime-2/page/17/
+[2025-09-17T15:41:18.594Z] [Samehadaku] Found 30 anime links on page 17.
+[2025-09-17T15:41:18.853Z] [Samehadaku] Successfully stored 30 slugs from page 17 in Redis.
+[2025-09-17T15:41:19.861Z] [Samehadaku] Scraping page 18 from https://v1.samehadaku.how/daftar-anime-2/page/18/
+[2025-09-17T15:41:20.303Z] [Samehadaku] Found 30 anime links on page 18.
+[2025-09-17T15:41:20.363Z] [Samehadaku] Successfully stored 30 slugs from page 18 in Redis.
+[2025-09-17T15:41:21.368Z] [Samehadaku] Scraping page 19 from https://v1.samehadaku.how/daftar-anime-2/page/19/
+[2025-09-17T15:41:21.844Z] [Samehadaku] Found 30 anime links on page 19.
+[2025-09-17T15:41:21.990Z] [Samehadaku] Successfully stored 30 slugs from page 19 in Redis.
+[2025-09-17T15:41:23.005Z] [Samehadaku] Scraping page 20 from https://v1.samehadaku.how/daftar-anime-2/page/20/
+[2025-09-17T15:41:23.422Z] [Samehadaku] Found 30 anime links on page 20.
+[2025-09-17T15:41:23.483Z] [Samehadaku] Successfully stored 30 slugs from page 20 in Redis.
+[2025-09-17T15:41:24.484Z] [Samehadaku] Scraping page 21 from https://v1.samehadaku.how/daftar-anime-2/page/21/
+[2025-09-17T15:41:24.951Z] [Samehadaku] Found 17 anime links on page 21.
+[2025-09-17T15:41:25.000Z] [Samehadaku] Successfully stored 17 slugs from page 21 in Redis.
+[2025-09-17T15:41:26.028Z] [Samehadaku] Scraping page 22 from https://v1.samehadaku.how/daftar-anime-2/page/22/
+[2025-09-17T15:41:26.452Z] [Samehadaku] Found 0 anime links on page 22.
+[2025-09-17T15:41:26.453Z] [Samehadaku] No more anime links found. Exiting.
+[2025-09-17T15:41:26.490Z] [Samehadaku] Finished scraping. Total slugs stored: 615
+[2025-09-17T15:41:26.492Z] Samehadaku scraper finished.
+[2025-09-17T15:41:26.492Z] All scrapers finished.
+[2025-09-17T15:44:38.846Z] [Request] GET http://localhost:3000/api/home
+[2025-09-17T15:44:39.804Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
+[2025-09-17T15:45:00.225Z] [Request] GET http://localhost:3000/api/anime/178433/episode/1
+[2025-09-17T15:45:27.776Z] Error
+    at anonymous (file:///home/abib/Project/Api/otakuin-api/node_modules/elysia/dist/bun/index.js:12:33)
+    at composeGeneralHandler (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/compose.ts:2442:2)
+    at compile (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6662:7)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/adapter/bun/index.ts:218:8)
+    at listen (/home/abib/Project/Api/otakuin-api/node_modules/elysia/src/index.ts:6747:31)
+    at <anonymous> (/home/abib/Project/Api/otakuin-api/src/main.ts:16:9)
+    at processTicksAndRejections (unknown:7:39)
