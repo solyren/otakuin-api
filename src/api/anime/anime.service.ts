@@ -1,7 +1,7 @@
 
 import { redis } from '../../lib/redis';
 import Fuse from 'fuse.js';
-import { getSamehadakuEmbeds, getNimegamiEmbeds } from '../../lib/embeds';
+import { getSamehadakuEmbeds, getNimegamiEmbeds, getAnimesuEmbeds } from '../../lib/embeds';
 import { randomBytes } from 'crypto';
 import * as cheerio from 'cheerio';
 import { getAnilistDataById, normalizeSlug } from '../../lib/anilist';
@@ -44,7 +44,7 @@ const findBestMatch = (animeDetails: any, slugList: { title: string; slug: strin
 
     const normalizedSlugList = slugList.map(item => ({
         ...item,
-        normalizedTitle: normalizeSlug(item.slug)
+        normalizedTitle: typeof item.slug === 'string' ? normalizeSlug(item.slug) : ''
     }));
 
     const fuse = new Fuse(normalizedSlugList, {
@@ -131,6 +131,7 @@ const findBestMatch = (animeDetails: any, slugList: { title: string; slug: strin
 
 const SLUGS_KEY = 'slugs:samehadaku';
 const NIMEGAMI_SLUGS_KEY = 'slugs:nimegami';
+const ANIMESU_SLUGS_KEY = 'slugs:animesu';
 
 const getManualMapKey = (source: string) => `manual_map:${source}:anilist_id_to_slug`;
 const STREAM_KEY_PREFIX = 'stream:';
@@ -324,6 +325,100 @@ const getNimegamiEpisodeList = async (id: number, animeDetails: any) => {
     return episodeList.sort((a, b) => b.episode - a.episode);
 }
 
+// -- Get AnimeSU Episode List --
+const getAnimesuEpisodeList = async (id: number, animeDetails: any) => {
+    const [animesuSlugsData, homeCache] = await Promise.all([
+        redis.hgetall(ANIMESU_SLUGS_KEY),
+        redis.get('home:anime_list')
+    ]);
+    
+    const animesuManualSlug = await redis.hget(getManualMapKey('animesu'), id.toString());
+
+    let animesuSlug: string | null = null;
+    let matchInfo: any = null;
+    
+    if (animesuManualSlug) {
+        animesuSlug = animesuManualSlug as string;
+        matchInfo = { found_slug: animesuSlug, match_method: 'manual' };
+    } else if (animesuSlugsData) {
+        const animesuSlugList = Object.entries(animesuSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
+        const match = findBestMatch(animeDetails, animesuSlugList);
+        if (match) {
+            animesuSlug = match.found_slug;
+            matchInfo = match;
+        } else {
+            if (homeCache) {
+                try {
+                    const homeList = typeof homeCache === 'string' ? JSON.parse(homeCache) : homeCache;
+                    const animeInHome = homeList.find((item: any) => item.id === id);
+                    if (animeInHome && animeInHome.title) {
+                        const animeWithHomeTitle = { ...animeDetails, title: animeInHome.title };
+                        const match = findBestMatch(animeWithHomeTitle, animesuSlugList);
+                        if (match) {
+                            animesuSlug = match.found_slug;
+                            matchInfo = { ...match, match_method: 'home_cache' };
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing home cache:', e);
+                }
+            }
+        }
+    }
+
+    if (!animesuSlug) {
+        return [];
+    }
+
+    console.log(`[AnimeSU] Found slug for anime ID ${id}: ${animesuSlug} (matched via ${matchInfo?.match_method || 'unknown'})`);
+
+    const animesuUrl = `https://v1.animasu.top/anime/${animesuSlug}/`;
+
+    const response = await fetch(animesuUrl, { redirect: 'follow' });
+
+    const finalUrl = response.url;
+    const extractAnimeSlug = (url: string) => {
+        try {
+            return new URL(url).pathname.split('/').filter(Boolean).pop() || '';
+        } catch (e) {
+            return '';
+        }
+    };
+
+    const originalSlugPart = extractAnimeSlug(animesuUrl);
+    const finalSlugPart = extractAnimeSlug(finalUrl);
+
+    if (originalSlugPart && finalSlugPart && originalSlugPart !== finalSlugPart) {
+        console.log(`Redirect detected for slug ${animesuSlug}. Expected slug part ${originalSlugPart}, got ${finalSlugPart}.`);
+        return [];
+    }
+
+    if (!response.ok) {
+        return [];
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    const episodeList: { episode: number; title: string; url: string }[] = [];
+    $('ul#daftarepisode li').each((i, el) => {
+        const linkElement = $(el).find('span.lchx a');
+        const title = linkElement.text().trim();
+        const url = linkElement.attr('href');
+
+        if (title && url) {
+            const episodeMatch = title.match(/Episode\s+(\d+(\.\d+)?)/i);
+            const episode = episodeMatch ? parseFloat(episodeMatch[1]) : 0;
+
+            if (episode > 0) {
+                episodeList.push({ episode, title, url });
+            }
+        }
+    });
+
+    return episodeList.sort((a, b) => b.episode - a.episode);
+}
+
 // -- Format Episode Slug --
 const formatEpisodeSlug = (domain: string, pathSlug: string, episode: number) => {
     let baseUrl = domain;
@@ -382,6 +477,10 @@ export const getAnimeDetail = async (id: number) => {
             episodeList = await getNimegamiEpisodeList(id, animeDetails);
         }
 
+        if (!episodeList || episodeList.length === 0) {
+            episodeList = await getAnimesuEpisodeList(id, animeDetails);
+        }
+
         if (episodeList.length > 0) {
             await redis.set(episodeCacheKey, episodeList, { ex: EPISODE_LIST_CACHE_EXPIRATION_SECONDS });
         }
@@ -419,16 +518,19 @@ export const getEpisodeStream = async (id: number, episode: number) => {
         return null;
     }
 
-    const [samehadakuSlugsData, nimegamiSlugsData, samehadakuManualSlug, nimegamiManualSlug, homeCache] = await Promise.all([
+    const [samehadakuSlugsData, nimegamiSlugsData, animesuSlugsData, samehadakuManualSlug, nimegamiManualSlug, animesuManualSlug, homeCache] = await Promise.all([
         redis.hgetall(SLUGS_KEY),
         redis.hgetall(NIMEGAMI_SLUGS_KEY),
+        redis.hgetall(ANIMESU_SLUGS_KEY),
         redis.hget(getManualMapKey('samehadaku'), id.toString()),
         redis.hget(getManualMapKey('nimegami'), id.toString()),
+        redis.hget(getManualMapKey('animesu'), id.toString()),
         redis.get('home:anime_list')
     ]);
 
     const samehadakuInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
     const nimegamiInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
+    const animesuInfo: any = { found_slug_title: null, found_slug: null, episode_url: null, match_method: null };
 
     const getAnimeTitleFromHomeCache = (animeId: number) => {
         if (!homeCache) return null;
@@ -500,8 +602,37 @@ export const getEpisodeStream = async (id: number, episode: number) => {
         }
     }
 
-    if (!samehadakuInfo.found_slug && !nimegamiInfo.found_slug) {
-        return { error: `Could not find a matching slug for ID ${id} from either source.` };
+    if (animesuManualSlug) {
+        animesuInfo.found_slug = animesuManualSlug as string;
+        animesuInfo.found_slug_title = 'Manual Mapping';
+        animesuInfo.match_method = 'manual';
+        animesuInfo.episode_url = `https://v1.animasu.top/nonton-${animesuInfo.found_slug}-episode-${episode}/`;
+    } else if (animesuSlugsData) {
+        const animesuSlugList = Object.entries(animesuSlugsData).map(([title, slug]) => ({ title, slug: slug as string }));
+        const match = findBestMatch(animeDetails, animesuSlugList);
+        if (match) {
+            animesuInfo.found_slug = match.found_slug;
+            animesuInfo.found_slug_title = match.found_slug_title;
+            animesuInfo.match_method = match.match_method;
+            animesuInfo.episode_url = `https://v1.animasu.top/nonton-${match.found_slug}-episode-${episode}/`;
+        } else {
+            const homeTitle = getAnimeTitleFromHomeCache(id);
+            if (homeTitle) {
+                const animeWithHomeTitle = { ...animeDetails, title: homeTitle };
+                const match = findBestMatch(animeWithHomeTitle, animesuSlugList);
+                if (match) {
+                    animesuInfo.found_slug = match.found_slug;
+                    animesuInfo.found_slug_title = match.found_slug_title;
+                    animesuInfo.match_method = 'home_cache';
+                    animesuInfo.episode_url = `https://v1.animasu.top/nonton-${match.found_slug}-episode-${episode}/`;
+                    console.log(`[Episode Route] Found AnimeSU slug using home cache title for anime ID ${id}`);
+                }
+            }
+        }
+    }
+
+    if (!samehadakuInfo.found_slug && !nimegamiInfo.found_slug && !animesuInfo.found_slug) {
+        return { error: `Could not find a matching slug for ID ${id} from any source.` };
     }
 
     let nimegamiEpisodeData: string | null = null;
@@ -513,14 +644,26 @@ export const getEpisodeStream = async (id: number, episode: number) => {
         }
     }
 
-    const [samehadakuEmbeds, nimegamiEmbeds] = await Promise.all([
+    // Get AnimeSU episode URL
+    let animesuEpisodeUrl: string | null = null;
+    if (animesuInfo.found_slug) {
+        const episodeList = await getAnimesuEpisodeList(id, animeDetails);
+        const foundEpisode = episodeList.find(e => e.episode === episode);
+        if (foundEpisode) {
+            animesuEpisodeUrl = foundEpisode.url;
+        }
+    }
+
+    const [samehadakuEmbeds, nimegamiEmbeds, animesuEmbeds] = await Promise.all([
         samehadakuInfo.episode_url ? getSamehadakuEmbeds(samehadakuInfo.episode_url) : Promise.resolve([]),
-        nimegamiEpisodeData ? getNimegamiEmbeds(nimegamiEpisodeData) : Promise.resolve([])
+        nimegamiEpisodeData ? getNimegamiEmbeds(nimegamiEpisodeData) : Promise.resolve([]),
+        animesuEpisodeUrl ? getAnimesuEmbeds(animesuEpisodeUrl) : Promise.resolve([])
     ]);
 
-    const [samehadakuStreams, nimegamiStreams] = await Promise.all([
+    const [samehadakuStreams, nimegamiStreams, animesuStreams] = await Promise.all([
         generateStreamIds(samehadakuEmbeds),
-        generateStreamIds(nimegamiEmbeds)
+        generateStreamIds(nimegamiEmbeds),
+        generateStreamIds(animesuEmbeds)
     ]);
 
     const response = {
@@ -529,10 +672,12 @@ export const getEpisodeStream = async (id: number, episode: number) => {
         sources: {
             samehadaku: samehadakuInfo,
             nimegami: nimegamiInfo,
+            animesu: animesuInfo
         },
         streams: {
             samehadaku: samehadakuStreams,
             nimegami: nimegamiStreams,
+            animesu: animesuStreams
         }
     };
 

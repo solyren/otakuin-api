@@ -2,7 +2,13 @@ import Fuse from 'fuse.js';
 import { redis } from './redis';
 
 // --- Normalize Slug ---
-export const normalizeSlug = (slug: string) => {
+export const normalizeSlug = (slug: any) => {
+    // Pastikan slug adalah string
+    if (typeof slug !== 'string') {
+        console.warn(`[Anilist] normalizeSlug received non-string input:`, slug);
+        return '';
+    }
+    
     let lastPart = slug.split('/').filter(Boolean).pop() || '';
     lastPart = lastPart.replace(/-episode-\d+.*$/, '');
     return lastPart.replace(/-/g, ' ');
