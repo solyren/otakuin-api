@@ -32,12 +32,12 @@ const mapIdToSlug = async () => {
     if (!source || !anilistId || !slug) {
         console.error('Error: Please provide source, Anilist ID, and a slug.');
         console.log('Usage: bun run map <source> <anilistId> <slug>');
-        console.log('Available sources: samehadaku, animesail');
+        console.log('Available sources: samehadaku, animasu');
         process.exit(1);
     }
 
-    if (!['samehadaku', 'animesail'].includes(source)) {
-        console.error('Error: Invalid source. Must be "samehadaku" or "animesail".');
+    if (!['samehadaku', 'animasu'].includes(source)) {
+        console.error('Error: Invalid source. Must be "samehadaku" or "animasu".');
         process.exit(1);
     }
 

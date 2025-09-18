@@ -126,7 +126,7 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
 }
 
 // --- Get AnimeSU Embeds ---
-async function getAnimesuEmbeds(url: string): Promise<any[]> {
+async function getAnimasuEmbeds(url: string): Promise<any[]> {
     try {
         const response = await fetch(url);
         if (!response.ok) {
@@ -166,7 +166,7 @@ async function getAnimesuEmbeds(url: string): Promise<any[]> {
         return embeds;
 
     } catch (error) {
-        console.error(`Error in getAnimesuEmbeds for ${url}:`, error);
+        console.error(`Error in getAnimasuEmbeds for ${url}:`, error);
         return [];
     }
 }
@@ -250,4 +250,4 @@ async function getNimegamiEmbeds(data: string): Promise<any[]> {
     }
 }
 
-export { getSamehadakuEmbeds, getNimegamiEmbeds, getAnimesuEmbeds };
+export { getSamehadakuEmbeds, getNimegamiEmbeds, getAnimasuEmbeds };

@@ -12,12 +12,12 @@ const syncMapToRedis = async () => {
     if (!source) {
         console.error('Error: Please provide a source.');
         console.log('Usage: bun run sync:map <source>');
-        console.log('Available sources: samehadaku, animesail');
+        console.log('Available sources: samehadaku, animasu');
         process.exit(1);
     }
 
-    if (!['samehadaku', 'animesail'].includes(source)) {
-        console.error('Error: Invalid source. Must be "samehadaku" or "animesail".');
+    if (!['samehadaku', 'animasu'].includes(source)) {
+        console.error('Error: Invalid source. Must be "samehadaku" or "animasu".');
         process.exit(1);
     }
 

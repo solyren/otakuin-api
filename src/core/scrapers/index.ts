@@ -1,7 +1,7 @@
 import '../../config';
 import { startNimegamiScraping } from './nimegami_scraper';
 import { startSamehadakuScraping } from './samehadaku_scraper';
-import { startAnimesuScraping } from './animesu_scraper';
+import { startAnimasuScraping } from './animasu_scraper';
 import { logger, errorLogger } from '../../lib/logger';
 
 // --- Scrape All ---
@@ -29,7 +29,7 @@ async function scrapeAll() {
 
     try {
         logger('Starting AnimeSU scraper...');
-        await startAnimesuScraping();
+        await startAnimasuScraping();
         logger('AnimeSU scraper finished.');
     } catch (error: any) {
         errorLogger(new Error(`AnimeSU scraper failed: ${error.message}`));
