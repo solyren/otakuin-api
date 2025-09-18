@@ -4,3 +4,4 @@ bun.lockb
 .env
 GEMINI.md
 QWEN.md
+logs
