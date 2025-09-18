@@ -125,6 +125,52 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
     }
 }
 
+// --- Get AnimeSU Embeds ---
+async function getAnimesuEmbeds(url: string): Promise<any[]> {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            return [];
+        }
+        const html = await response.text();
+        const $ = cheerio.load(html);
+
+        const embeds = [];
+        const mirrorOptions = $('select.mirror option').toArray();
+
+        // Skip the first option as it's just a placeholder
+        for (let i = 1; i < mirrorOptions.length; i++) {
+            const option = $(mirrorOptions[i]);
+            const encodedValue = option.attr('value');
+            const serverName = option.text().trim();
+
+            if (encodedValue) {
+                try {
+                    // Decode the Base64 encoded HTML
+                    const decodedHtml = Buffer.from(encodedValue, 'base64').toString('utf-8');
+                    const $decoded = cheerio.load(decodedHtml);
+                    const iframeSrc = $decoded('iframe').attr('src');
+
+                    if (iframeSrc) {
+                        let resolvedUrl: string | null = iframeSrc;
+                        // AnimeSU uses different player URLs, we'll just return the iframe src directly
+                        if (resolvedUrl) {
+                            embeds.push({ server: serverName, url: resolvedUrl });
+                        }
+                    }
+                } catch (decodeError) {
+                    console.error(`Error decoding embed for ${url}:`, decodeError);
+                }
+            }
+        }
+        return embeds;
+
+    } catch (error) {
+        console.error(`Error in getAnimesuEmbeds for ${url}:`, error);
+        return [];
+    }
+}
+
 // --- Get DlBerkasDrive Servers ---
 async function getDlBerkasDriveServers(baseUrl: string, resolution: string, useResolutionOnly: boolean = false): Promise<any[]> {
     try {
@@ -204,4 +250,4 @@ async function getNimegamiEmbeds(data: string): Promise<any[]> {
     }
 }
 
-export { getSamehadakuEmbeds, getNimegamiEmbeds };
+export { getSamehadakuEmbeds, getNimegamiEmbeds, getAnimesuEmbeds };
