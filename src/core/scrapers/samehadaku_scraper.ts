@@ -49,19 +49,43 @@ async function scrapePage(page: number): Promise<boolean> {
     }
 }
 
+// --- Scrape Pages Concurrently ---
+async function scrapePagesConcurrently(startPage: number, pageCount: number): Promise<boolean> {
+    const pagePromises = [];
+    for (let i = 0; i < pageCount; i++) {
+        pagePromises.push(scrapePage(startPage + i));
+    }
+
+    const results = await Promise.all(pagePromises);
+    
+    // Check if any page failed
+    const hasError = results.some(result => !result);
+    if (hasError) {
+        errorLogger(new Error('[Samehadaku] One or more pages failed during concurrent scraping.'));
+        return false;
+    }
+
+    // Check if we should continue (any page had content)
+    const shouldContinue = results.some(result => result);
+    return shouldContinue;
+}
+
 // --- Start Samehadaku Scraping ---
 export async function startSamehadakuScraping() {
     logger('[Samehadaku] Starting scraping...');
     await redis.del(SOURCE_KEY);
     logger(`[Samehadaku] Cleared old data from ${SOURCE_KEY}`);
 
-    let page = 1;
+    let currentPage = 1;
+    const pagesPerBatch = 10; // Process 10 pages at a time
     let hasMorePages = true;
 
     while (hasMorePages) {
-        hasMorePages = await scrapePage(page);
+        hasMorePages = await scrapePagesConcurrently(currentPage, pagesPerBatch);
+        currentPage += pagesPerBatch;
+        
+        // Add a small delay between batches to be respectful to the server
         if (hasMorePages) {
-            page++;
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
