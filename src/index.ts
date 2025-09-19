@@ -38,7 +38,7 @@ app.use(swagger({
     documentation: {
         info: {
             title: 'Otakuin API',
-            version: '0.0.2',
+            version: '0.0.3',
             description: 'Dokumentasi API untuk layanan streaming anime Otakuin.'
         }
     }

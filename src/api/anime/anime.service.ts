@@ -506,6 +506,9 @@ export const getAnimeDetail = async (id: number) => {
     };
 }
 
+const EMBED_CACHE_KEY_PREFIX = 'embeds:';
+const EMBED_CACHE_EXPIRATION_SECONDS = 3600; // 1 hour
+
 export const getEpisodeStream = async (id: number, episode: number) => {
     const cacheKey = `${EPISODE_CACHE_KEY_PREFIX}${id}:${episode}`;
     const cachedResponse = await redis.get(cacheKey);
@@ -614,7 +617,7 @@ export const getEpisodeStream = async (id: number, episode: number) => {
             animasuInfo.found_slug = match.found_slug;
             animasuInfo.found_slug_title = match.found_slug_title;
             animasuInfo.match_method = match.match_method;
-                                animasuInfo.episode_url = `${process.env.ANIMASU_BASE_URL}/nonton-${match.found_slug}-episode-${episode}/`;
+            animasuInfo.episode_url = `${process.env.ANIMASU_BASE_URL}/nonton-${match.found_slug}-episode-${episode}/`;
         } else {
             const homeTitle = getAnimeTitleFromHomeCache(id);
             if (homeTitle) {
@@ -635,30 +638,96 @@ export const getEpisodeStream = async (id: number, episode: number) => {
         return { error: `Could not find a matching slug for ID ${id} from any source.` };
     }
 
-    let nimegamiEpisodeData: string | null = null;
-    if (nimegamiInfo.found_slug) {
-        const episodeList = await getNimegamiEpisodeList(id, animeDetails);
-        const foundEpisode = episodeList.find(e => e.episode === episode);
-        if (foundEpisode) {
-            nimegamiEpisodeData = foundEpisode.data;
-        }
-    }
-
-    // Get Animasu episode URL
-    let animasuEpisodeUrl: string | null = null;
-    if (animasuInfo.found_slug) {
-        const episodeList = await getAnimasuEpisodeList(id, animeDetails);
-        const foundEpisode = episodeList.find(e => e.episode === episode);
-        if (foundEpisode) {
-            animasuEpisodeUrl = foundEpisode.url;
-        }
-    }
-
-    const [samehadakuEmbeds, nimegamiEmbeds, animasuEmbeds] = await Promise.all([
-        samehadakuInfo.episode_url ? getSamehadakuEmbeds(samehadakuInfo.episode_url) : Promise.resolve([]),
-        nimegamiEpisodeData ? getNimegamiEmbeds(nimegamiEpisodeData) : Promise.resolve([]),
-        animasuEpisodeUrl ? getAnimasuEmbeds(animasuEpisodeUrl) : Promise.resolve([])
+    const [nimegamiEpisodeData, animasuEpisodeUrl] = await Promise.all([
+        (async () => {
+            if (nimegamiInfo.found_slug) {
+                const episodeList = await getNimegamiEpisodeList(id, animeDetails);
+                const foundEpisode = episodeList.find(e => e.episode === episode);
+                return foundEpisode ? foundEpisode.data : null;
+            }
+            return null;
+        })(),
+        (async () => {
+            if (animasuInfo.found_slug) {
+                const episodeList = await getAnimasuEpisodeList(id, animeDetails);
+                const foundEpisode = episodeList.find(e => e.episode === episode);
+                return foundEpisode ? foundEpisode.url : null;
+            }
+            return null;
+        })()
     ]);
+
+    const samehadakuEmbedCacheKey = samehadakuInfo.episode_url ? `${EMBED_CACHE_KEY_PREFIX}${samehadakuInfo.episode_url}` : null;
+    const nimegamiEmbedCacheKey = nimegamiEpisodeData ? `${EMBED_CACHE_KEY_PREFIX}${nimegamiEpisodeData}` : null;
+    const animasuEmbedCacheKey = animasuEpisodeUrl ? `${EMBED_CACHE_KEY_PREFIX}${animasuEpisodeUrl}` : null;
+
+    const [cachedSamehadakuEmbeds, cachedNimegamiEmbeds, cachedAnimasuEmbeds] = await Promise.all([
+        samehadakuEmbedCacheKey ? redis.get(samehadakuEmbedCacheKey) : Promise.resolve(null),
+        nimegamiEmbedCacheKey ? redis.get(nimegamiEmbedCacheKey) : Promise.resolve(null),
+        animasuEmbedCacheKey ? redis.get(animasuEmbedCacheKey) : Promise.resolve(null)
+    ]);
+
+    let samehadakuEmbeds: any[] = [];
+    let nimegamiEmbeds: any[] = [];
+    let animasuEmbeds: any[] = [];
+
+    const embedFetchPromises: Promise<void>[] = [];
+
+    if (samehadakuInfo.episode_url) {
+        if (cachedSamehadakuEmbeds) {
+            samehadakuEmbeds = JSON.parse(cachedSamehadakuEmbeds as string);
+        } else {
+            embedFetchPromises.push(
+                getSamehadakuEmbeds(samehadakuInfo.episode_url).then(embeds => {
+                    samehadakuEmbeds = embeds;
+                    if (samehadakuEmbedCacheKey) {
+                        redis.set(samehadakuEmbedCacheKey, JSON.stringify(embeds), { ex: EMBED_CACHE_EXPIRATION_SECONDS });
+                    }
+                }).catch(error => {
+                    console.error(`Error fetching Samehadaku embeds: ${error}`);
+                    samehadakuEmbeds = [];
+                })
+            );
+        }
+    }
+
+    if (nimegamiEpisodeData) {
+        if (cachedNimegamiEmbeds) {
+            nimegamiEmbeds = JSON.parse(cachedNimegamiEmbeds as string);
+        } else {
+            embedFetchPromises.push(
+                getNimegamiEmbeds(nimegamiEpisodeData).then(embeds => {
+                    nimegamiEmbeds = embeds;
+                    if (nimegamiEmbedCacheKey) {
+                        redis.set(nimegamiEmbedCacheKey, JSON.stringify(embeds), { ex: EMBED_CACHE_EXPIRATION_SECONDS });
+                    }
+                }).catch(error => {
+                    console.error(`Error fetching Nimegami embeds: ${error}`);
+                    nimegamiEmbeds = [];
+                })
+            );
+        }
+    }
+
+    if (animasuEpisodeUrl) {
+        if (cachedAnimasuEmbeds) {
+            animasuEmbeds = JSON.parse(cachedAnimasuEmbeds as string);
+        } else {
+            embedFetchPromises.push(
+                getAnimasuEmbeds(animasuEpisodeUrl).then(embeds => {
+                    animasuEmbeds = embeds;
+                    if (animasuEmbedCacheKey) {
+                        redis.set(animasuEmbedCacheKey, JSON.stringify(embeds), { ex: EMBED_CACHE_EXPIRATION_SECONDS });
+                    }
+                }).catch(error => {
+                    console.error(`Error fetching Animasu embeds: ${error}`);
+                    animasuEmbeds = [];
+                })
+            );
+        }
+    }
+
+    await Promise.all(embedFetchPromises);
 
     const [samehadakuStreams, nimegamiStreams, animasuStreams] = await Promise.all([
         generateStreamIds(samehadakuEmbeds),
