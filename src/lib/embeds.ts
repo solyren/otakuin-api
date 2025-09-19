@@ -25,11 +25,28 @@ const agent = new Agent({
 
 setGlobalDispatcher(agent);
 
-// --- Resolve Player ---
+const playerResolutionCache = new Map<string, string | null>();
+const PLAYER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// -- Resolve Player --
 async function resolvePlayer(url: string, playerName: string): Promise<string | null> {
-    for (let i = 0; i < 3; i++) {
+    const cachedResult = playerResolutionCache.get(url);
+    if (cachedResult !== undefined) {
+        return cachedResult;
+    }
+
+    for (let i = 0; i < 2; i++) {
         try {
-            const initialResponse = await axios.get(url, { headers: { 'User-Agent': getRandomUserAgent() } });
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+            const initialResponse = await axios.get(url, { 
+                headers: { 'User-Agent': getRandomUserAgent() },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
             const countryCode = initialResponse.headers['x-local'] || 'ID';
 
             const response = await axios.get(url, {
@@ -41,8 +58,11 @@ async function resolvePlayer(url: string, playerName: string): Promise<string | 
                     'Accept-Encoding': 'gzip, deflate, br',
                     'Connection': 'keep-alive',
                     'Cookie': `_as_ipin_ct=${countryCode}; _as_ipin_tz=UTC; _as_ipin_lc=en-US`
-                }
+                },
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             if (response.status === 200) {
                 const html = response.data;
@@ -50,6 +70,8 @@ async function resolvePlayer(url: string, playerName: string): Promise<string | 
                 const videoSource = $('video source').first().attr('src');
 
                 if (videoSource) {
+                    playerResolutionCache.set(url, videoSource);
+                    setTimeout(() => playerResolutionCache.delete(url), PLAYER_CACHE_TTL);
                     return videoSource;
                 } else if (i === 0) {
                     console.log(`resolvePlayer for ${url} failed. Received HTML:`);
@@ -60,17 +82,25 @@ async function resolvePlayer(url: string, playerName: string): Promise<string | 
             console.error(`Error resolving player (attempt ${i + 1}):`, error);
         }
 
-        if (i < 2) {
-            await new Promise(resolve => setTimeout(resolve, 3000));
+        if (i < 1) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
         }
     }
+    
+    playerResolutionCache.set(url, null);
+    setTimeout(() => playerResolutionCache.delete(url), PLAYER_CACHE_TTL);
     return null;
 }
 
-// --- Get Samehadaku Embeds ---
+// -- Get Samehadaku Embeds --
 async function getSamehadakuEmbeds(url: string): Promise<any[]> {
     try {
-        const response = await fetch(url);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
         if (!response.ok) {
             return [];
         }
@@ -85,50 +115,73 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
         }
 
         const embeds = [];
+        const promises: Promise<void>[] = [];
 
-        for (const el of playerOptions.toArray()) {
+        playerOptions.each((i, el) => {
             const option = $(el);
             const serverName = option.text().trim();
             const nume = option.data('nume');
             const type = option.data('type');
 
-            const ajaxResponse = await fetch(`${process.env.SAMEHADAKU_BASE_URL}/wp-admin/admin-ajax.php`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                },
-                body: `action=player_ajax&post=${post_id}&nume=${nume}&type=${type}`,
-            });
+            const promise = (async () => {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8000);
+                    
+                    const ajaxResponse = await fetch(`${process.env.SAMEHADAKU_BASE_URL}/wp-admin/admin-ajax.php`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        },
+                        body: `action=player_ajax&post=${post_id}&nume=${nume}&type=${type}`,
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
 
-            if (ajaxResponse.ok) {
-                const ajaxData = await ajaxResponse.text();
-                const $iframeDoc = cheerio.load(ajaxData);
-                let iframeSrc = $iframeDoc('iframe').attr('src');
+                    if (ajaxResponse.ok) {
+                        const ajaxData = await ajaxResponse.text();
+                        const $iframeDoc = cheerio.load(ajaxData);
+                        let iframeSrc = $iframeDoc('iframe').attr('src');
 
-                if (iframeSrc) {
-                    let resolvedUrl: string | null = iframeSrc;
-                    if (iframeSrc.includes('/utils/player/')) {
-                        const playerName = iframeSrc.split('/utils/player/')[1].split('/')[0];
-                        resolvedUrl = await resolvePlayer(iframeSrc, playerName);
+                        if (iframeSrc) {
+                            let resolvedUrl: string | null = iframeSrc;
+                            if (iframeSrc.includes('/utils/player/')) {
+                                const playerName = iframeSrc.split('/utils/player/')[1].split('/')[0];
+                                resolvedUrl = await resolvePlayer(iframeSrc, playerName);
+                            }
+
+                            if (resolvedUrl) {
+                                embeds.push({ server: serverName, url: resolvedUrl });
+                            }
+                        }
                     }
-
-                    if (resolvedUrl) {
-                        embeds.push({ server: serverName, url: resolvedUrl });
-                    }
+                } catch (error) {
+                    console.error(`Error fetching Samehadaku embed ${serverName}:`, error);
                 }
-            }
-        }
+            })();
+
+            promises.push(promise);
+        });
+
+        await Promise.all(promises);
         return embeds;
 
     } catch (error) {
+        console.error(`Error in getSamehadakuEmbeds for ${url}:`, error);
         return [];
     }
 }
 
-// --- Get AnimeSU Embeds ---
+// -- Get AnimeSU Embeds --
 async function getAnimasuEmbeds(url: string): Promise<any[]> {
     try {
-        const response = await fetch(url);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
         if (!response.ok) {
             return [];
         }
@@ -137,32 +190,33 @@ async function getAnimasuEmbeds(url: string): Promise<any[]> {
 
         const embeds = [];
         const mirrorOptions = $('select.mirror option').toArray();
+        const promises: Promise<void>[] = [];
 
-        // Skip the first option as it's just a placeholder
         for (let i = 1; i < mirrorOptions.length; i++) {
             const option = $(mirrorOptions[i]);
             const encodedValue = option.attr('value');
             const serverName = option.text().trim();
 
             if (encodedValue) {
-                try {
-                    // Decode the Base64 encoded HTML
-                    const decodedHtml = Buffer.from(encodedValue, 'base64').toString('utf-8');
-                    const $decoded = cheerio.load(decodedHtml);
-                    const iframeSrc = $decoded('iframe').attr('src');
+                const promise = (async () => {
+                    try {
+                        const decodedHtml = Buffer.from(encodedValue, 'base64').toString('utf-8');
+                        const $decoded = cheerio.load(decodedHtml);
+                        const iframeSrc = $decoded('iframe').attr('src');
 
-                    if (iframeSrc) {
-                        let resolvedUrl: string | null = iframeSrc;
-                        // AnimeSU uses different player URLs, we'll just return the iframe src directly
-                        if (resolvedUrl) {
-                            embeds.push({ server: serverName, url: resolvedUrl });
+                        if (iframeSrc) {
+                            embeds.push({ server: serverName, url: iframeSrc });
                         }
+                    } catch (decodeError) {
+                        console.error(`Error decoding embed for ${url}:`, decodeError);
                     }
-                } catch (decodeError) {
-                    console.error(`Error decoding embed for ${url}:`, decodeError);
-                }
+                })();
+
+                promises.push(promise);
             }
         }
+
+        await Promise.all(promises);
         return embeds;
 
     } catch (error) {
@@ -222,26 +276,37 @@ async function getDlBerkasDriveServers(baseUrl: string, resolution: string, useR
     }
 }
 
-// --- Get Nimegami Embeds ---
+// -- Get Nimegami Embeds --
 async function getNimegamiEmbeds(data: string): Promise<any[]> {
     try {
         const decodedData = Buffer.from(data, 'base64').toString('utf-8');
         const streams = JSON.parse(decodedData);
 
         const embeds = [];
+        const promises: Promise<void>[] = [];
+
         for (const stream of streams) {
             if (stream.url && stream.url.length > 0) {
                 const baseUrl = stream.url[0];
                 
-                // Jika URL berasal dari dl.berkasdrive.com, kita perlu mem-parsing server-servernya
-                if (baseUrl.includes('dl.berkasdrive.com')) {
-                    const dlBerkasServers = await getDlBerkasDriveServers(baseUrl, stream.format); // Selalu sertakan info server
-                    embeds.push(...dlBerkasServers);
-                } else {
-                    embeds.push({ server: stream.format, url: baseUrl });
-                }
+                const promise = (async () => {
+                    if (baseUrl.includes('dl.berkasdrive.com')) {
+                        try {
+                            const dlBerkasServers = await getDlBerkasDriveServers(baseUrl, stream.format);
+                            embeds.push(...dlBerkasServers);
+                        } catch (error) {
+                            console.error(`Error fetching DlBerkasDrive servers for ${baseUrl}:`, error);
+                        }
+                    } else {
+                        embeds.push({ server: stream.format, url: baseUrl });
+                    }
+                })();
+
+                promises.push(promise);
             }
         }
+
+        await Promise.all(promises);
         return embeds;
 
     } catch (error) {
