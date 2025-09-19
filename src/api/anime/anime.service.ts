@@ -448,7 +448,8 @@ const generateStreamIds = async (embeds: any[]): Promise<any[]> => {
         return {
             server: embed.server,
             url: embed.url,
-            stream_id: streamId
+            stream_id: streamId,
+            resolution: embed.resolution || "default"
         };
     }).filter(Boolean);
 

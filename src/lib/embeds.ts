@@ -123,6 +123,14 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
             const nume = option.data('nume');
             const type = option.data('type');
 
+            let resolution = "";
+            const resolutionMatch = serverName.match(/(\d+p)/i);
+            if (resolutionMatch) {
+                resolution = resolutionMatch[1];
+            } else {
+                resolution = "default";
+            }
+
             const promise = (async () => {
                 try {
                     const controller = new AbortController();
@@ -152,7 +160,7 @@ async function getSamehadakuEmbeds(url: string): Promise<any[]> {
                             }
 
                             if (resolvedUrl) {
-                                embeds.push({ server: serverName, url: resolvedUrl });
+                                embeds.push({ server: serverName, url: resolvedUrl, resolution });
                             }
                         }
                     }
@@ -197,6 +205,14 @@ async function getAnimasuEmbeds(url: string): Promise<any[]> {
             const encodedValue = option.attr('value');
             const serverName = option.text().trim();
 
+            let resolution = "";
+            const resolutionMatch = serverName.match(/(\d+p)/i);
+            if (resolutionMatch) {
+                resolution = resolutionMatch[1];
+            } else {
+                resolution = "default";
+            }
+
             if (encodedValue) {
                 const promise = (async () => {
                     try {
@@ -205,7 +221,7 @@ async function getAnimasuEmbeds(url: string): Promise<any[]> {
                         const iframeSrc = $decoded('iframe').attr('src');
 
                         if (iframeSrc) {
-                            embeds.push({ server: serverName, url: iframeSrc });
+                            embeds.push({ server: serverName, url: iframeSrc, resolution });
                         }
                     } catch (decodeError) {
                         console.error(`Error decoding embed for ${url}:`, decodeError);
@@ -225,12 +241,10 @@ async function getAnimasuEmbeds(url: string): Promise<any[]> {
     }
 }
 
-// --- Get DlBerkasDrive Servers ---
+// -- Get DlBerkasDrive Servers --
 async function getDlBerkasDriveServers(baseUrl: string, resolution: string, useResolutionOnly: boolean = false): Promise<any[]> {
     try {
-        // Tambahkan penanganan untuk URL yang mungkin sudah memiliki parameter
         const urlObj = new URL(baseUrl);
-        // Hapus parameter server jika ada
         urlObj.searchParams.delete('server');
         const cleanUrl = urlObj.toString();
         
@@ -255,16 +269,15 @@ async function getDlBerkasDriveServers(baseUrl: string, resolution: string, useR
                 
                 let serverName;
                 if (useResolutionOnly) {
-                    // Untuk nimegami, tampilkan resolusi + nomor server
                     serverName = `${resolution} server ${serverNumber}`;
                 } else {
-                    // Format nama server: "dlberkas {resolusi} server {nomor}"
                     serverName = `dlberkas ${resolution} server ${serverNumber}`;
                 }
                 
                 servers.push({ 
                     server: serverName, 
-                    url: serverUrl 
+                    url: serverUrl,
+                    resolution: resolution
                 });
             }
         });
@@ -293,12 +306,16 @@ async function getNimegamiEmbeds(data: string): Promise<any[]> {
                     if (baseUrl.includes('dl.berkasdrive.com')) {
                         try {
                             const dlBerkasServers = await getDlBerkasDriveServers(baseUrl, stream.format);
-                            embeds.push(...dlBerkasServers);
+                            const serversWithResolution = dlBerkasServers.map(server => ({
+                                ...server,
+                                resolution: stream.format
+                            }));
+                            embeds.push(...serversWithResolution);
                         } catch (error) {
                             console.error(`Error fetching DlBerkasDrive servers for ${baseUrl}:`, error);
                         }
                     } else {
-                        embeds.push({ server: stream.format, url: baseUrl });
+                        embeds.push({ server: stream.format, url: baseUrl, resolution: stream.format });
                     }
                 })();
 
