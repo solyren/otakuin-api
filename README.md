@@ -185,18 +185,25 @@ LOG_LEVEL=info
 
 ### Project Architecture
 
-This project follows a **layered architecture** pattern:
+This project follows a **layered architecture** with **provider-based structure** for scalability:
 
 ```
-Routes → Controllers → Services → External APIs
+Routes → Controllers → Services → External APIs (Samehadaku, Otakudesu, etc.)
            ↓
       Middlewares
 ```
 
-- **Routes**: Define API endpoints
-- **Controllers**: Handle HTTP requests/responses
-- **Services**: Business logic and data fetching
+**Architecture Layers:**
+- **Routes**: Define API endpoints (generic, e.g., `/api/home`)
+- **Controllers**: Handle HTTP requests/responses (provider-specific, e.g., `samehadaku.controller.ts`)
+- **Services**: Business logic and scraping (provider-specific, e.g., `samehadaku.service.ts`)
 - **Middlewares**: Cross-cutting concerns (logging, error handling)
+
+**Provider-based Structure:**
+- Each scraper provider has its own service and controller files
+- Routes remain generic and can switch between providers easily
+- Easy to add new providers without modifying existing code
+- Can aggregate data from multiple providers in one endpoint
 
 ### Adding New Endpoints
 
@@ -264,13 +271,13 @@ otakuin/
 │   ├── config/              # Configuration files
 │   │   ├── app.ts           # App settings (port, env)
 │   │   └── logger.ts        # Pino logger setup
-│   ├── controllers/         # Request handlers
-│   │   └── anime.controller.ts
-│   ├── services/            # Business logic
-│   │   └── anime.service.ts
+│   ├── controllers/         # Request handlers (provider-specific)
+│   │   └── samehadaku.controller.ts
+│   ├── services/            # Business logic (provider-specific)
+│   │   └── samehadaku.service.ts
 │   ├── middlewares/         # Middleware functions
 │   │   └── logger.middleware.ts
-│   ├── routes/              # API routes
+│   ├── routes/              # API routes (generic)
 │   │   └── home.route.ts
 │   ├── types/               # TypeScript types
 │   │   └── index.ts
@@ -286,6 +293,20 @@ otakuin/
 ├── tsconfig.json            # TypeScript configuration
 ├── package.json             # Dependencies
 └── README.md                # You are here
+
+### Provider-based Structure
+
+**For Samehadaku Provider:**
+- `src/services/samehadaku.service.ts` - Scraping logic for Samehadaku
+- `src/controllers/samehadaku.controller.ts` - Request handling for Samehadaku
+
+**Generic Routes:**
+- `src/routes/home.route.ts` - Generic endpoint that uses `samehadaku.controller`
+
+**To Add New Provider (e.g., Otakudesu):**
+1. Create `src/services/otakudesu.service.ts`
+2. Create `src/controllers/otakudesu.controller.ts`
+3. Update route to use the new controller or create provider-specific routes
 ```
 
 ## Contributing

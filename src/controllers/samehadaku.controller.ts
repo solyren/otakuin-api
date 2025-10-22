@@ -1,4 +1,4 @@
-import { getHomeAnime } from '../services/anime.service';
+import { getHomeAnime } from '../services/samehadaku.service';
 import type { HomeResponse } from '../types';
 import { logger } from '../config/logger';
 
