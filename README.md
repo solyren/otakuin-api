@@ -285,7 +285,6 @@ otakuin/
 ├── nodemon.json             # Nodemon configuration
 ├── tsconfig.json            # TypeScript configuration
 ├── package.json             # Dependencies
-├── AGENTS.md                # Project context (for AI agents)
 └── README.md                # You are here
 ```
 
